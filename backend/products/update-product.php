@@ -1,44 +1,58 @@
 <?php
-// ----------------------------------------------
-// 🧾 update-product.php
-// 🎯 Actualizar producto (POST JSON)
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_error('Método no permitido', 405);
 
-include '../db.php';
-$data = json_decode(file_get_contents("php://input"), true);
+$body = json_decode(file_get_contents('php://input'), true);
+if (!is_array($body)) json_error('JSON inválido', 400);
 
-$id          = intval($data['id'] ?? 0);
-$name        = $conn->real_escape_string($data['name'] ?? '');
-$size        = $conn->real_escape_string($data['size'] ?? '');
-$price       = isset($data['price']) ? floatval($data['price']) : null;
-$stock       = isset($data['stock']) ? intval($data['stock']) : null;
-$category_id = isset($data['category_id']) && $data['category_id'] !== '' ? intval($data['category_id']) : 'NULL';
+$id          = (int)($body['id'] ?? 0);
+$name        = trim((string)($body['name'] ?? ''));
+$size        = trim((string)($body['size'] ?? ''));
+$price       = $body['price'] ?? null;
+$stock       = $body['stock'] ?? null;
+$categoryRaw = $body['category_id'] ?? null;
 
-if ($id <= 0 || $name === '' || $price === null || $stock === null) {
-  http_response_code(400);
-  echo json_encode(["success"=>false, "error"=>"Datos inválidos"]);
-  exit;
+if ($id <= 0 || $name === '' || !is_numeric($price) || !is_numeric($stock)) {
+  json_error('Datos inválidos', 400);
 }
 
-$sql = "
-  UPDATE products
-  SET name = '$name',
-      size = '$size',
-      price = $price,
-      stock = $stock,
-      category_id = $category_id
-  WHERE id = $id
-";
+$price = (float)$price;
+$stock = (int)$stock;
+if ($price < 0) json_error('price debe ser ≥ 0', 422);
+if ($stock < 0) json_error('stock debe ser ≥ 0', 422);
 
-if ($conn->query($sql)) {
-  echo json_encode(["success"=>true]);
+$hasCategory = ($categoryRaw !== '' && $categoryRaw !== null);
+if ($hasCategory && !is_numeric($categoryRaw)) json_error('category_id inválido', 400);
+$categoryId = $hasCategory ? (int)$categoryRaw : null;
+
+if ($categoryId === null) {
+  $sql = "
+    UPDATE products
+    SET name = ?, size = ?, price = ?, stock = ?, category_id = NULL
+    WHERE id = ?
+  ";
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) json_error('Error preparando update', 500);
+  // name(s), size(s), price(d), stock(i), id(i)
+  $stmt->bind_param('ssdii', $name, $size, $price, $stock, $id);
 } else {
-  http_response_code(500);
-  echo json_encode(["success"=>false, "error"=>"Error al actualizar"]);
+  $sql = "
+    UPDATE products
+    SET name = ?, size = ?, price = ?, stock = ?, category_id = ?
+    WHERE id = ?
+  ";
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) json_error('Error preparando update', 500);
+  // name(s), size(s), price(d), stock(i), category_id(i), id(i)
+  $stmt->bind_param('ssdiii', $name, $size, $price, $stock, $categoryId, $id);
 }
+
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) json_error('Error al actualizar', 500);
+json_ok(true);

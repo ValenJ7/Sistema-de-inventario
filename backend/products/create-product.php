@@ -1,36 +1,48 @@
 <?php
-// ----------------------------------------------
-// 🧾 create-product.php
-// 🎯 Crear producto (POST JSON)
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_error('Método no permitido', 405);
 
-include '../db.php';
-$data = json_decode(file_get_contents("php://input"), true);
+$body = json_decode(file_get_contents('php://input'), true);
+if (!is_array($body)) json_error('JSON inválido', 400);
 
-if (!isset($data['name']) || !isset($data['price']) || !isset($data['stock'])) {
-  http_response_code(400);
-  echo json_encode(["success"=>false, "error"=>"Faltan campos obligatorios"]);
-  exit;
+$name        = trim((string)($body['name'] ?? ''));
+$size        = trim((string)($body['size'] ?? ''));
+$price       = $body['price'] ?? null;
+$stock       = $body['stock'] ?? null;
+$categoryRaw = $body['category_id'] ?? null;
+
+if ($name === '' || !is_numeric($price) || !is_numeric($stock)) {
+  json_error('Faltan campos obligatorios o tipos inválidos (name, price, stock)', 400);
 }
 
-$name        = $conn->real_escape_string($data['name']);
-$size        = $conn->real_escape_string($data['size'] ?? '');
-$price       = floatval($data['price']);
-$stock       = intval($data['stock']);
-$category_id = isset($data['category_id']) && $data['category_id'] !== '' ? intval($data['category_id']) : 'NULL';
+$price = (float)$price;
+$stock = (int)$stock;
+if ($price < 0) json_error('price debe ser ≥ 0', 422);
+if ($stock < 0) json_error('stock debe ser ≥ 0', 422);
 
-$sql = "INSERT INTO products (name, category_id, size, price, stock)
-        VALUES ('$name', $category_id, '$size', $price, $stock)";
+$hasCategory = ($categoryRaw !== '' && $categoryRaw !== null);
+if ($hasCategory && !is_numeric($categoryRaw)) json_error('category_id inválido', 400);
+$categoryId = $hasCategory ? (int)$categoryRaw : null;
 
-if ($conn->query($sql)) {
-  echo json_encode(["success"=>true, "id"=>$conn->insert_id, "message"=>"Producto agregado"]);
+if ($categoryId === null) {
+  $sql = "INSERT INTO products (name, category_id, size, price, stock) VALUES (?, NULL, ?, ?, ?)";
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) json_error('Error preparando insert', 500);
+  $stmt->bind_param('ssdi', $name, $size, $price, $stock);
 } else {
-  http_response_code(500);
-  echo json_encode(["success"=>false, "error"=>"Error al insertar producto"]);
+  $sql = "INSERT INTO products (name, category_id, size, price, stock) VALUES (?, ?, ?, ?, ?)";
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) json_error('Error preparando insert', 500);
+  $stmt->bind_param('sisdi', $name, $categoryId, $size, $price, $stock);
 }
+
+$ok = $stmt->execute();
+if (!$ok) json_error('Error al insertar producto', 500);
+$newId = $stmt->insert_id;
+$stmt->close();
+
+json_ok(['id' => $newId, 'message' => 'Producto agregado'], 201);

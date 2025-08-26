@@ -1,25 +1,17 @@
 <?php
-// ----------------------------------------------
-// 🧾 get-categories.php
-// 🎯 Lista categorías
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') json_error('Método no permitido', 405);
 
-require '../db.php';
+$stmt = $conn->prepare("SELECT id, name, description, created_at FROM categories ORDER BY created_at DESC");
+if (!$stmt) json_error('Error preparando consulta', 500);
 
-$sql = "SELECT id, name, description, created_at FROM categories ORDER BY created_at DESC";
-$result = $conn->query($sql);
+$stmt->execute();
+$res = $stmt->get_result();
+$rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+$stmt->close();
 
-$rows = [];
-if ($result && $result->num_rows) {
-  while ($r = $result->fetch_assoc()) {
-    $rows[] = $r;
-  }
-}
-
-echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+json_ok($rows);

@@ -1,32 +1,26 @@
 <?php
-// ----------------------------------------------
-// 🧾 update-category.php
-// 🎯 Actualizar categoría (PUT JSON)
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: PUT, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'PUT') json_error('Método no permitido', 405);
 
-require '../db.php';
-$data = json_decode(file_get_contents('php://input'), true);
+$body = json_decode(file_get_contents('php://input'), true);
+if (!is_array($body)) json_error('JSON inválido', 400);
 
-if (!isset($data['id']) || !isset($data['name'])) {
-  http_response_code(400);
-  echo json_encode(['success' => false, 'error' => 'Faltan campos']);
-  exit;
-}
+$id   = (int)($body['id'] ?? 0);
+$name = trim((string)($body['name'] ?? ''));
+$description = trim((string)($body['description'] ?? ''));
 
-$id   = intval($data['id']);
-$name = $conn->real_escape_string($data['name']);
-$description = $conn->real_escape_string($data['description'] ?? '');
+if ($id <= 0 || $name === '') json_error('Faltan campos', 400);
 
-$sql = "UPDATE categories SET name='$name', description='$description' WHERE id=$id";
-if ($conn->query($sql) === TRUE) {
-  echo json_encode(['success' => true]);
-} else {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'No se pudo actualizar']);
-}
+$stmt = $conn->prepare("UPDATE categories SET name = ?, description = ? WHERE id = ?");
+if (!$stmt) json_error('Error preparando update', 500);
+$stmt->bind_param('ssi', $name, $description, $id);
+
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) json_error('No se pudo actualizar', 500);
+json_ok(true);

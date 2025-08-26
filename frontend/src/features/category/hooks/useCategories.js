@@ -1,40 +1,56 @@
 // ----------------------------------------------
-// 🪝 useCategories
+// 🪝 useCategories — Paso 1: consumo robusto del backend
 // ----------------------------------------------
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-
-const BASE = 'http://localhost/SistemaDeInventario/backend/categories';
+import api from '../../../api/backend';
 
 export default function useCategories() {
   const [categories, setCategories] = useState([]);
+  const [loading,    setLoading]    = useState(false);
 
   const loadCategories = async () => {
     try {
-      const url = `${BASE}/get-categories.php?t=${Date.now()}`;
-      const { data } = await axios.get(url);
-      setCategories(data);
+      setLoading(true);
+      const res = await api.get(`/categories/get-categories.php?t=${Date.now()}`);
+      // Con el interceptor, res.data ya es ARRAY si backend envía {success,data:[...]}
+      const items = Array.isArray(res.data) ? res.data : [];
+      setCategories(items);
     } catch (err) {
       console.error('Error cargando categorías:', err);
+      setCategories([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => { loadCategories(); }, []);
 
   const addCategory = async (payload) => {
-    try { await axios.post(`${BASE}/create-category.php`, payload); await loadCategories(); }
-    catch (err) { console.error('Error creando categoría:', err); }
+    try {
+      await api.post('/categories/create-category.php', payload);
+      await loadCategories();
+    } catch (err) {
+      console.error('Error creando categoría:', err);
+    }
   };
 
   const updateCategory = async (payload) => {
-    try { await axios.put(`${BASE}/update-category.php`, payload); await loadCategories(); }
-    catch (err) { console.error('Error actualizando categoría:', err); }
+    try {
+      await api.put('/categories/update-category.php', payload);
+      await loadCategories();
+    } catch (err) {
+      console.error('Error actualizando categoría:', err);
+    }
   };
 
   const deleteCategory = async (id) => {
-    try { await axios.delete(`${BASE}/delete-category.php?id=${id}`); setCategories(prev => prev.filter(c => c.id !== id)); }
-    catch (err) { console.error('Error eliminando categoría:', err); }
+    try {
+      await api.delete(`/categories/delete-category.php?id=${id}`);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error('Error eliminando categoría:', err);
+    }
   };
 
-  return { categories, addCategory, updateCategory, deleteCategory };
+  return { categories, loading, addCategory, updateCategory, deleteCategory, reload: loadCategories };
 }

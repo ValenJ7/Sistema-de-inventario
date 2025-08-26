@@ -1,31 +1,26 @@
 <?php
-// ----------------------------------------------
-// 🧾 create-category.php
-// 🎯 Crear categoría (POST JSON)
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_error('Método no permitido', 405);
 
-require '../db.php';
-$data = json_decode(file_get_contents('php://input'), true);
+$body = json_decode(file_get_contents('php://input'), true);
+if (!is_array($body)) json_error('JSON inválido', 400);
 
-if (!isset($data['name']) || $data['name'] === '') {
-  http_response_code(400);
-  echo json_encode(['success' => false, 'error' => 'Falta el nombre']);
-  exit;
-}
+$name = trim((string)($body['name'] ?? ''));
+$description = trim((string)($body['description'] ?? ''));
 
-$name = $conn->real_escape_string($data['name']);
-$description = $conn->real_escape_string($data['description'] ?? '');
+if ($name === '') json_error('Falta el nombre', 400);
 
-$sql = "INSERT INTO categories (name, description) VALUES ('$name', '$description')";
-if ($conn->query($sql) === TRUE) {
-  echo json_encode(['success' => true, 'id' => $conn->insert_id]);
-} else {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'No se pudo crear']);
-}
+$stmt = $conn->prepare("INSERT INTO categories (name, description) VALUES (?, ?)");
+if (!$stmt) json_error('Error preparando insert', 500);
+$stmt->bind_param('ss', $name, $description);
+
+$ok = $stmt->execute();
+if (!$ok) json_error('No se pudo crear', 500);
+$newId = $stmt->insert_id;
+$stmt->close();
+
+json_ok(['id'=>$newId], 201);

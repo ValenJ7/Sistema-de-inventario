@@ -1,28 +1,20 @@
 <?php
-// ----------------------------------------------
-// 🧾 delete-product.php
-// 🎯 Elimina un producto por ID (DELETE ?id=)
-// ----------------------------------------------
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Methods: DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+require __DIR__ . '/../http/cors.php';
+require __DIR__ . '/../http/json.php';
+require __DIR__ . '/../db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') json_error('Método no permitido', 405);
 
-include '../db.php';
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($id <= 0) json_error('ID inválido', 400);
 
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-if ($id <= 0) {
-  http_response_code(400);
-  echo json_encode(['success' => false, 'error' => 'ID inválido']);
-  exit;
-}
+$stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
+if (!$stmt) json_error('Error preparando delete', 500);
+$stmt->bind_param('i', $id);
 
-$sql = "DELETE FROM products WHERE id=$id";
-if ($conn->query($sql) === TRUE) {
-  echo json_encode(['success' => true]);
-} else {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'No se pudo eliminar']);
-}
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) json_error('No se pudo eliminar', 500);
+json_ok(true);
