@@ -1,48 +1,39 @@
-// ----------------------------------------------
-// 🧾 ProductList
-// ----------------------------------------------
 export default function ProductList({ products, setSelectedProduct, onDeleteProduct }) {
-  const handleDelete = async (id) => {
-    try { await onDeleteProduct(id); }
-    catch (error) { console.error('Error al eliminar producto:', error); }
-  };
-
   return (
-    <div className="p-4">
-      <div className="flex justify-center mt-6">
-        <div className="w-full max-w-5xl">
-          <table className="w-full text-sm border border-gray-300 rounded overflow-hidden shadow">
-            <thead className="bg-gray-100 text-left">
-              <tr>
-                <th className="p-3 border-b border-gray-300">Nombre</th>
-                <th className="p-3 border-b border-gray-300">Categoría</th>
-                <th className="p-3 border-b border-gray-300">Talle</th>
-                <th className="p-3 border-b border-gray-300 text-right">Precio</th>
-                <th className="p-3 border-b border-gray-300 text-right">Stock</th>
-                <th className="p-3 border-b border-gray-300 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.isArray(products) && products.map((producto, index) => (
-                <tr key={producto.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-gray-100'}>
-                  <td className="p-3 border-b border-gray-200">{producto.name}</td>
-                  <td className="p-3 border-b border-gray-200">{producto.category_name || '—'}</td>
-                  <td className="p-3 border-b border-gray-200">{producto.size}</td>
-                  <td className="p-3 border-b border-gray-200 text-right">${Number(producto.price ?? 0).toFixed(2)}</td>
-                  <td className="p-3 border-b border-gray-200 text-right">{producto.stock}</td>
-                  <td className="p-3 border-b border-gray-200 text-center space-x-2">
-                    <button onClick={() => setSelectedProduct(producto)} className="text-blue-600 hover:underline">Editar</button>
-                    <button onClick={() => handleDelete(producto.id)} className="text-red-600 hover:underline">Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-              {Array.isArray(products) && products.length === 0 && (
-                <tr><td className="p-3 text-center text-gray-500" colSpan={6}>Sin productos</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div className="overflow-x-auto mt-6">
+      <table className="min-w-full border border-gray-300">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="px-4 py-2 border">ID</th>
+            <th className="px-4 py-2 border">Nombre</th>
+            <th className="px-4 py-2 border">Slug</th>{/* 👈 nuevo */}
+            <th className="px-4 py-2 border">Talle</th>
+            <th className="px-4 py-2 border">Precio</th>
+            <th className="px-4 py-2 border">Stock</th>
+            <th className="px-4 py-2 border">Categoría</th>
+            <th className="px-4 py-2 border">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map(p => (
+            <tr key={p.id} className="text-center">
+              <td className="px-4 py-2 border">{p.id}</td>
+              <td className="px-4 py-2 border">{p.name}</td>
+              <td className="px-4 py-2 border">
+                <code className="px-2 py-1 bg-gray-100 rounded">{p.slug}</code>
+              </td>
+              <td className="px-4 py-2 border">{p.size}</td>
+              <td className="px-4 py-2 border">${p.price}</td>
+              <td className="px-4 py-2 border">{p.stock}</td>
+              <td className="px-4 py-2 border">{p.category_name || '-'}</td>
+              <td className="px-4 py-2 border space-x-2">
+                <button onClick={() => setSelectedProduct(p)} className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Editar</button>
+                <button onClick={() => onDeleteProduct(p.id)} className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Eliminar</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

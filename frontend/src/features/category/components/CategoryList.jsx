@@ -1,36 +1,31 @@
-// ----------------------------------------------
-// 🧾 CategoryList (defensivo)
-// ----------------------------------------------
 export default function CategoryList({ categories, setSelected, onDelete }) {
-  const list = Array.isArray(categories) ? categories : [];
-
   return (
-    <div className="max-w-md mx-auto mt-6">
-      <table className="w-full text-sm border border-gray-200 rounded overflow-hidden">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto mt-6">
+      <table className="min-w-full border border-gray-300">
+        <thead className="bg-gray-100">
           <tr>
-            <th className="p-2 text-left">Nombre</th>
-            <th className="p-2 text-left">Descripción</th>
-            <th className="p-2 text-center">Acciones</th>
+            <th className="px-4 py-2 border">ID</th>
+            <th className="px-4 py-2 border">Nombre</th>
+            <th className="px-4 py-2 border">Slug</th>{/* 👈 nuevo */}
+            <th className="px-4 py-2 border">Descripción</th>
+            <th className="px-4 py-2 border">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {list.map((cat, i) => (
-            <tr key={cat.id ?? i} className={i % 2 ? 'bg-gray-50' : 'bg-white'}>
-              <td className="p-2 border-t">{cat.name}</td>
-              <td className="p-2 border-t">{cat.description || '—'}</td>
-              <td className="p-2 border-t text-center space-x-3">
-                <button onClick={() => setSelected?.(cat)} className="text-blue-600 hover:underline">Editar</button>
-                <button onClick={() => onDelete?.(cat.id)} className="text-red-600 hover:underline">Eliminar</button>
+          {categories.map(c => (
+            <tr key={c.id} className="text-center">
+              <td className="px-4 py-2 border">{c.id}</td>
+              <td className="px-4 py-2 border">{c.name}</td>
+              <td className="px-4 py-2 border">
+                <code className="px-2 py-1 bg-gray-100 rounded">{c.slug}</code>
+              </td>
+              <td className="px-4 py-2 border">{c.description || '-'}</td>
+              <td className="px-4 py-2 border space-x-2">
+                <button onClick={() => setSelected(c)} className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Editar</button>
+                <button onClick={() => onDelete(c.id)} className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Eliminar</button>
               </td>
             </tr>
           ))}
-
-          {list.length === 0 && (
-            <tr>
-              <td className="p-3 text-center text-gray-500" colSpan={3}>Sin categorías</td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
