@@ -4,7 +4,7 @@ return [
   'DB_PORT'   => 3307,         // XAMPP: 3307 (según me mostraste)
   'DB_USER'   => 'root',
   'DB_PASS'   => '',
-  'DB_NAME'   => 'sistema_de_inventario', // <-- PONÉ AQUÍ el nombre REAL; si querés usar 'tienda', creala en el Paso B
+  'DB_NAME'   => 'sistemainventario', // <-- PONÉ AQUÍ el nombre REAL; si querés usar 'tienda', creala en el Paso B
 
   'CORS_ALLOW_ORIGIN'  => '*',
   'CORS_ALLOW_HEADERS' => 'Content-Type, Authorization',

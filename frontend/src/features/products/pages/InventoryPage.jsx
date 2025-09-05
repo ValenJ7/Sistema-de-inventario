@@ -1,52 +1,32 @@
 // ----------------------------------------------
-// 🧾 ProductList.jsx
+// 🧾 InventoryPage.jsx
 // ----------------------------------------------
-export default function ProductList({ products, setSelectedProduct, onDeleteProduct }) {
+import { useState } from 'react';
+import ProductForm from '../components/ProductForm';
+import ProductList from '../components/ProductList';
+import useProducts from '../hooks/useProducts';
+
+export default function InventoryPage() {
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const { products, addProduct, updateProduct, deleteProduct, reload } = useProducts();
+
   return (
-    <div className="overflow-x-auto mt-6">
-      <table className="min-w-full border border-gray-300">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-4 py-2 border">ID</th>
-            <th className="px-4 py-2 border">Nombre</th>
-            <th className="px-4 py-2 border">Slug</th> {/* 👈 Nueva columna */}
-            <th className="px-4 py-2 border">Talle</th>
-            <th className="px-4 py-2 border">Precio</th>
-            <th className="px-4 py-2 border">Stock</th>
-            <th className="px-4 py-2 border">Categoría</th>
-            <th className="px-4 py-2 border">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) => (
-            <tr key={p.id} className="text-center">
-              <td className="px-4 py-2 border">{p.id}</td>
-              <td className="px-4 py-2 border">{p.name}</td>
-              <td className="px-4 py-2 border">
-                <code className="px-2 py-1 bg-gray-100 rounded">{p.slug}</code>
-              </td>
-              <td className="px-4 py-2 border">{p.size}</td>
-              <td className="px-4 py-2 border">${p.price}</td>
-              <td className="px-4 py-2 border">{p.stock}</td>
-              <td className="px-4 py-2 border">{p.category_name || '-'}</td>
-              <td className="px-4 py-2 border space-x-2">
-                <button
-                  onClick={() => setSelectedProduct(p)}
-                  className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => onDeleteProduct(p.id)}
-                  className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4 text-center">Sistema de Inventario</h1>
+
+      <ProductForm
+        selectedProduct={selectedProduct}
+        setSelectedProduct={setSelectedProduct}
+        onAddProduct={addProduct}
+        onUpdateProduct={updateProduct}
+        reload={reload}
+      />
+
+      <ProductList
+        products={products}
+        setSelectedProduct={setSelectedProduct}
+        onDeleteProduct={deleteProduct}
+      />
     </div>
   );
 }

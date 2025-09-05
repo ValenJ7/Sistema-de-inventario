@@ -1,5 +1,5 @@
 // ----------------------------------------------
-// 🪝 useProducts — Paso 1: consumo robusto del backend
+// 🪝 useProducts — consumo del backend
 // ----------------------------------------------
 import { useEffect, useState } from 'react';
 import api from '../../../api/backend';
@@ -36,15 +36,19 @@ export default function useProducts() {
         : Number(data.category_id),
   });
 
+  // ✅ Crear SIN recargar: devolvemos el id y que el form recargue al final
   const addProduct = async (data) => {
     try {
-      await api.post('/products/create-product.php', normalizeProduct(data));
-      await loadProducts();
+      const res = await api.post('/products/create-product.php', normalizeProduct(data));
+      const id = res?.data?.data?.id ?? null; // { success, data: { id, ... } }
+      return id;
     } catch (error) {
       console.error('Error al agregar producto:', error);
+      return null;
     }
   };
 
+  // Puedes dejar este con recarga interna; el form hará una recarga final si sube imagen
   const updateProduct = async (data) => {
     try {
       const payload = normalizeProduct(data);
