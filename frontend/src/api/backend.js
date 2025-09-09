@@ -1,6 +1,4 @@
-// ----------------------------------------------
-// 📦 backend.js (con default + named export)
-// ----------------------------------------------
+// api/backend.js
 import axios from 'axios';
 
 const api = axios.create({
@@ -8,7 +6,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Normaliza { success, data:[...] } → res.data = array
+// Manténe tu interceptor si querés
 api.interceptors.response.use((res) => {
   const payload = res.data;
   if (payload && Array.isArray(payload.data)) {
@@ -17,17 +15,36 @@ api.interceptors.response.use((res) => {
   return res;
 });
 
-// ⬇️ named export para subir imágenes (multipart)
 export async function uploadProductImage(productId, file) {
-  const form = new FormData();
-  form.append('product_id', String(productId));
-  form.append('image', file);
+  try {
+    const form = new FormData();
+    form.append('product_id', String(productId));
+    form.append('image', file);
 
-  const res = await api.post('/products/upload-image.php', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return res.data; // { success, data: { id, url }, error }
+    const res = await api.post('/products/upload-image.php', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    // Si el PHP no manda JSON válido, res.data podría no ser objeto
+    if (res && res.data && typeof res.data === 'object') {
+      return {
+        success: !!res.data.success,
+        data: res.data.data ?? null,
+        error: res.data.error ?? null,
+      };
+    }
+
+    // Fallback si vino algo raro
+    return { success: false, data: null, error: 'Respuesta no válida del servidor' };
+  } catch (e) {
+    // Axios error: intentar leer respuesta del server
+    const serverMsg =
+      e?.response?.data?.error ||
+      e?.response?.data?.message ||
+      e?.message ||
+      'Error de red';
+    return { success: false, data: null, error: serverMsg };
+  }
 }
 
-// ⬇️ default export (lo que te está faltando)
 export default api;

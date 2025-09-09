@@ -1,5 +1,5 @@
 // ----------------------------------------------
-// 🧾 InventoryPage.jsx
+// 🧾 InventoryPage.jsx (fix: reloadToken + wrapper de reload)
 // ----------------------------------------------
 import { useState } from 'react';
 import ProductForm from '../components/ProductForm';
@@ -8,7 +8,18 @@ import useProducts from '../hooks/useProducts';
 
 export default function InventoryPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const { products, addProduct, updateProduct, deleteProduct, reload } = useProducts();
+
+  // Renombramos reload del hook para evitar choque de nombres
+  const { products, addProduct, updateProduct, deleteProduct, reload: fetchProducts } = useProducts();
+
+  // 🔁 Token anti-cache para imágenes
+  const [reloadToken, setReloadToken] = useState(0);
+
+  // Wrapper: setea token (o Date.now()) y después vuelve a pedir productos
+  const reload = (token) => {
+    setReloadToken(token || Date.now());
+    if (typeof fetchProducts === 'function') fetchProducts();
+  };
 
   return (
     <div className="p-4">
@@ -19,13 +30,14 @@ export default function InventoryPage() {
         setSelectedProduct={setSelectedProduct}
         onAddProduct={addProduct}
         onUpdateProduct={updateProduct}
-        reload={reload}
+        reload={reload}                // 👈 pasamos wrapper
       />
 
       <ProductList
         products={products}
         setSelectedProduct={setSelectedProduct}
         onDeleteProduct={deleteProduct}
+        reloadToken={reloadToken}      // 👈 ahora sí existe
       />
     </div>
   );

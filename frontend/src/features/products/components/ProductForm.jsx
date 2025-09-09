@@ -1,84 +1,82 @@
-// ----------------------------------------------
-// 🧾 ProductForm.jsx — con soporte de imagen y recarga final
-// ----------------------------------------------
+// components/ProductForm.jsx
 import { useEffect, useState } from 'react';
 import api, { uploadProductImage } from '../../../api/backend';
+import ImagePickerPro from './ui/ImagePickerPro';
+
+
+const BACKEND_BASE = 'http://localhost/SistemaDeInventario/backend';
 
 export default function ProductForm({
   selectedProduct,
   setSelectedProduct,
   onAddProduct,
   onUpdateProduct,
-  reload,                 // 👈 recibimos reload
+  reload,
 }) {
   const [form, setForm] = useState({
-    id: null,
-    name: '',
-    category_id: '',
-    size: '',
-    price: '',
-    stock: '',
+    id: null, name: '', category_id: '', size: '', price: '', stock: '',
   });
 
   const [categories, setCategories] = useState([]);
 
-  // 🖼️ Estado para imagen
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  // Imagen
+  const [file, setFile] = useState(null);           // nuevo archivo
+  const [preview, setPreview] = useState(null);     // URL.createObjectURL del nuevo
+  const [currentImage, setCurrentImage] = useState(null); // imagen actual (DB)
 
   // Cargar categorías
   useEffect(() => {
-    api
-      .get('/categories/get-categories.php')
-      .then((res) => {
-        const items = Array.isArray(res.data) ? res.data : [];
-        setCategories(items);
-      })
+    api.get('/categories/get-categories.php')
+      .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
       .catch((err) => console.error('Error cargando categorías:', err));
   }, []);
 
-  // Si seleccionás un producto para editar, llenamos form
+  // Al seleccionar producto para editar
   useEffect(() => {
     if (selectedProduct) {
       setForm({
         id: selectedProduct.id ?? null,
         name: selectedProduct.name ?? '',
-        category_id:
-          selectedProduct.category_id === null ||
-          selectedProduct.category_id === undefined
-            ? ''
-            : String(selectedProduct.category_id),
+        category_id: selectedProduct.category_id == null ? '' : String(selectedProduct.category_id),
         size: selectedProduct.size ?? '',
         price: selectedProduct.price ?? '',
         stock: selectedProduct.stock ?? '',
       });
-      setPreview(
-        selectedProduct.main_image
-          ? `http://localhost/SistemaDeInventario/backend${selectedProduct.main_image}`
-          : null
-      );
-    } else {
-      setForm({
-        id: null,
-        name: '',
-        category_id: '',
-        size: '',
-        price: '',
-        stock: '',
-      });
+
+      const path = selectedProduct.image_path ?? selectedProduct.main_image ?? null;
+      setCurrentImage(path ? `${BACKEND_BASE}${path}` : null);
+
+      if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
       setFile(null);
+    } else {
+      setForm({ id:null, name:'', category_id:'', size:'', price:'', stock:'' });
+      if (preview) URL.revokeObjectURL(preview);
+      setPreview(null);
+      setFile(null);
+      setCurrentImage(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct]);
+
+  // liberar memoria si cambia preview o al desmontar
+  useEffect(() => {
+    return () => { if (preview) URL.revokeObjectURL(preview); };
+  }, [preview]);
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const onPickFile = (e) => {
-    const f = e.target.files?.[0];
-    setFile(f || null);
-    setPreview(f ? URL.createObjectURL(f) : null);
-  };
+  // recibe File|null del ImagePicker
+  const handlePick = (file) => {
+  // liberar preview anterior
+  if (preview) URL.revokeObjectURL(preview);
+  if (!file) { setFile(null); setPreview(null); return; }
+
+  const url = URL.createObjectURL(file);
+  setFile(file);
+  setPreview(url);
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,121 +84,64 @@ export default function ProductForm({
 
     try {
       if (selectedProduct) {
-        // UPDATE
         await onUpdateProduct({ ...form, id: productId ?? form.id });
         productId = productId ?? form.id;
       } else {
-        // CREATE — obtener id del producto recién creado (sin recargar aún)
-        productId = await onAddProduct(form);
+        productId = await onAddProduct(form); // debe devolver id
       }
 
-      // Subir imagen si hay archivo y tenemos id
       if (file && productId) {
-        try {
-          await uploadProductImage(productId, file);
-        } catch (err) {
-          console.error('Error subiendo imagen:', err);
-        }
+        const r = await uploadProductImage(productId, file);
+        if (!r?.success) console.error('Error subiendo imagen:', r?.error);
       }
 
-      // ✅ Recargar UNA sola vez al final, para traer main_image
-      if (typeof reload === 'function') {
-        await reload();
-      }
+      if (typeof reload === 'function') await reload(Date.now());
     } catch (err) {
       console.error('Error en submit:', err);
     }
 
-    // Reset
-    setForm({
-      id: null,
-      name: '',
-      category_id: '',
-      size: '',
-      price: '',
-      stock: '',
-    });
+    if (preview) URL.revokeObjectURL(preview);
+    setForm({ id:null, name:'', category_id:'', size:'', price:'', stock:'' });
     setSelectedProduct(null);
     setFile(null);
     setPreview(null);
+    setCurrentImage(null);
   };
 
   return (
     <form onSubmit={handleSubmit} className="mb-8 max-w-md mx-auto space-y-3">
       <input type="hidden" name="id" value={form.id ?? ''} readOnly />
 
-      <input
-        className="border p-2 rounded w-full"
-        type="text"
-        name="name"
-        placeholder="Nombre"
-        value={form.name}
-        onChange={handleChange}
-        required
-      />
+      <input className="border p-2 rounded w-full" type="text" name="name" placeholder="Nombre"
+             value={form.name} onChange={handleChange} required />
 
-      <select
-        name="category_id"
-        className="border p-2 rounded w-full"
-        value={form.category_id}
-        onChange={handleChange}
-      >
+      <select name="category_id" className="border p-2 rounded w-full"
+              value={form.category_id} onChange={handleChange}>
         <option value="">Seleccioná una categoría</option>
-        {Array.isArray(categories) &&
-          categories.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
+        {categories.map((c) => (
+          <option key={c.id} value={String(c.id)}>{c.name}</option>
+        ))}
       </select>
 
-      <input
-        className="border p-2 rounded w-full"
-        type="text"
-        name="size"
-        placeholder="Talle"
-        value={form.size}
-        onChange={handleChange}
-        required
-      />
-      <input
-        className="border p-2 rounded w-full"
-        type="number"
-        name="price"
-        placeholder="Precio"
-        value={form.price}
-        onChange={handleChange}
-        required
-      />
-      <input
-        className="border p-2 rounded w-full"
-        type="number"
-        name="stock"
-        placeholder="Stock"
-        value={form.stock}
-        onChange={handleChange}
-        required
-      />
+      <input className="border p-2 rounded w-full" type="text" name="size" placeholder="Talle"
+             value={form.size} onChange={handleChange} required />
+      <input className="border p-2 rounded w-full" type="number" name="price" placeholder="Precio"
+             value={form.price} onChange={handleChange} required />
+      <input className="border p-2 rounded w-full" type="number" name="stock" placeholder="Stock"
+             value={form.stock} onChange={handleChange} required />
 
-      {/* 📷 Input file */}
-      <div className="space-y-2">
-        <label className="block font-medium">
-          Imagen principal (jpg/png/webp, máx 5MB)
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={onPickFile}
-          className="w-full"
-        />
-        {preview && (
-          <img
-            src={preview}
-            alt="preview"
-            className="h-24 w-24 object-cover rounded border"
-          />
-        )}
-      </div>
+      {/* ⬇️ Selector estilado */}
+      <ImagePickerPro
+      label="Imagen principal"
+      value={preview || currentImage || null}
+      onChangeFile={(file) => {
+        if (preview) URL.revokeObjectURL(preview);
+        if (!file) { setFile(null); setPreview(null); return; }
+        const url = URL.createObjectURL(file);
+        setFile(file);
+        setPreview(url);
+      }}
+    />
 
       <button
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full font-semibold"

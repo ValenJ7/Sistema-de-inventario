@@ -16,11 +16,19 @@ $sql = "
     p.stock,
     p.category_id,
     c.name AS category_name,
+    -- imagen principal (primera por sort_order, luego id)
     (
       SELECT pi.url
       FROM product_images pi
       WHERE pi.product_id = p.id
       ORDER BY pi.sort_order ASC, pi.id ASC
+      LIMIT 1
+    ) AS image_path,
+    (
+      SELECT pi.url
+      FROM product_images pi
+      WHERE pi.product_id = p.id
+      ORDER BY pi.sort_order ASC, pi.id DESC
       LIMIT 1
     ) AS main_image
   FROM products p
@@ -31,7 +39,7 @@ $stmt = $conn->prepare($sql);
 if (!$stmt) json_error('Error preparando consulta', 500);
 
 $stmt->execute();
-$res = $stmt->get_result();
+$res  = $stmt->get_result();
 $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 $stmt->close();
 
