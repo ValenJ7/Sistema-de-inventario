@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import api, { uploadProductImage } from '../../../api/backend';
 import ImagePickerPro from './ui/ImagePickerPro';
+import useProductImages from "../hooks/useProductImages";
+import ProductImageGallery from "./ui/ProductImageGallery";
 
 
 const BACKEND_BASE = 'http://localhost/SistemaDeInventario/backend';
@@ -23,6 +25,7 @@ export default function ProductForm({
   const [file, setFile] = useState(null);           // nuevo archivo
   const [preview, setPreview] = useState(null);     // URL.createObjectURL del nuevo
   const [currentImage, setCurrentImage] = useState(null); // imagen actual (DB)
+  const { images ,deleteImage, setMainImage } = useProductImages(form.id);
 
   // Cargar categorías
   useEffect(() => {
@@ -141,7 +144,15 @@ export default function ProductForm({
         setFile(file);
         setPreview(url);
       }}
-    />
+      />
+      
+      {form.id && (
+        <ProductImageGallery
+          images={images}
+          onDelete={deleteImage}
+          onSetMain={setMainImage}
+        />
+      )}
 
       <button
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full font-semibold"
