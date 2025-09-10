@@ -1,67 +1,69 @@
 import { useEffect, useState } from "react";
 import api from "../../../api/backend";
 
+/**
+ * Hook para cargar y operar con imágenes de un producto
+ */
 export default function useProductImages(productId) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [reloadFlag, setReloadFlag] = useState(0);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  const reload = () => setReloadTick((t) => t + 1);
 
   useEffect(() => {
-    if (!productId) return;
+    if (!productId) {
+      setImages([]);
+      return;
+    }
     setLoading(true);
     api
       .get(`/products/get-product-images.php?product_id=${productId}`)
       .then((res) => {
-        if (Array.isArray(res.data)) {
-          setImages(res.data);
-        } else {
-          setImages([]);
-        }
+        // El backend devuelve array directo vía json_ok
+        if (Array.isArray(res.data)) setImages(res.data);
+        else setImages([]);
       })
       .catch((err) => {
         console.error("Error cargando imágenes:", err);
         setImages([]);
       })
       .finally(() => setLoading(false));
-  }, [productId, reloadFlag]);
-
-  const reload = () => setReloadFlag(Date.now());
+  }, [productId, reloadTick]);
 
   // 🗑 Borrar imagen
   const deleteImage = async (id) => {
     try {
-      const res = await api.delete(`/products/delete-product-image.php?id=${id}`);
-      if (res?.data?.success) reload();
+      await api.delete(`/products/delete-product-image.php?id=${id}`);
+      reload();
     } catch (err) {
       console.error("Error borrando imagen:", err);
     }
   };
 
-  // ⭐ Marcar como principal
-    const setMainImage = async (id) => {
+  // ⭐ Marcar como principal (usar FormData para PHP)
+  const setMainImage = async (id) => {
     try {
-      const formData = new FormData();
-      formData.append("id", id);
-
-      const res = await api.post(`/products/set-main-product-image.php`, formData, {
+      const fd = new FormData();
+      fd.append("id", id);
+      await api.post(`/products/set-main-product-image.php`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
-      if (res?.data?.success) reload();
+      reload();
     } catch (err) {
       console.error("Error seteando principal:", err);
     }
   };
 
-  // 🆕 Guardar orden en backend
-    const reorderImages = async (orders) => {
-      try {
-        const res = await api.post(`/products/reorder-product-images.php`, { orders });
-        if (res?.data?.success) reload();
-      } catch (err) {
-        console.error("Error reordenando imágenes:", err);
-      }
-    };
+  // 🔀 Reordenar imágenes
+  const reorderImages = async (orders) => {
+    try {
+      await api.post(`/products/reorder-product-images.php`, { orders });
+      reload();
+    } catch (err) {
+      console.error("Error reordenando imágenes:", err);
+    }
+  };
 
   return { images, loading, reload, deleteImage, setMainImage, reorderImages };
 }

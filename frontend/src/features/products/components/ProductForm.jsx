@@ -5,7 +5,6 @@ import ImagePickerPro from './ui/ImagePickerPro';
 import useProductImages from "../hooks/useProductImages";
 import ProductImageGallery from "./ui/ProductImageGallery";
 
-
 const BACKEND_BASE = 'http://localhost/SistemaDeInventario/backend';
 
 export default function ProductForm({
@@ -25,7 +24,9 @@ export default function ProductForm({
   const [file, setFile] = useState(null);           // nuevo archivo
   const [preview, setPreview] = useState(null);     // URL.createObjectURL del nuevo
   const [currentImage, setCurrentImage] = useState(null); // imagen actual (DB)
-  const { images ,deleteImage, setMainImage, reorderImages } = useProductImages(form.id);
+
+  // Hook de imágenes
+  const { images, deleteImage, setMainImage, reorderImages } = useProductImages(form.id);
 
   // Cargar categorías
   useEffect(() => {
@@ -72,14 +73,13 @@ export default function ProductForm({
 
   // recibe File|null del ImagePicker
   const handlePick = (file) => {
-  // liberar preview anterior
-  if (preview) URL.revokeObjectURL(preview);
-  if (!file) { setFile(null); setPreview(null); return; }
+    if (preview) URL.revokeObjectURL(preview);
+    if (!file) { setFile(null); setPreview(null); return; }
 
-  const url = URL.createObjectURL(file);
-  setFile(file);
-  setPreview(url);
-};
+    const url = URL.createObjectURL(file);
+    setFile(file);
+    setPreview(url);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,21 +135,15 @@ export default function ProductForm({
 
       {/* ⬇️ Selector estilado */}
       <ImagePickerPro
-      label="Imagen principal"
-      value={preview || currentImage || null}
-      onChangeFile={(file) => {
-        if (preview) URL.revokeObjectURL(preview);
-        if (!file) { setFile(null); setPreview(null); return; }
-        const url = URL.createObjectURL(file);
-        setFile(file);
-        setPreview(url);
-      }}
+        label="Imagen principal"
+        value={preview || currentImage || null}
+        onChangeFile={handlePick}
       />
-      
+
       {form.id && (
         <ProductImageGallery
           images={images}
-          onDelete={deleteImage}
+          onDeleteImage={deleteImage}   // 👈 cambio de nombre
           onSetMain={setMainImage}
           onReorder={reorderImages}
         />
