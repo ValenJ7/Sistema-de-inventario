@@ -25,7 +25,7 @@ export default function ProductForm({
   const [file, setFile] = useState(null);           // nuevo archivo
   const [preview, setPreview] = useState(null);     // URL.createObjectURL del nuevo
   const [currentImage, setCurrentImage] = useState(null); // imagen actual (DB)
-  const { images ,deleteImage, setMainImage } = useProductImages(form.id);
+  const { images ,deleteImage, setMainImage, reorderImages } = useProductImages(form.id);
 
   // Cargar categorías
   useEffect(() => {
@@ -151,6 +151,7 @@ export default function ProductForm({
           images={images}
           onDelete={deleteImage}
           onSetMain={setMainImage}
+          onReorder={reorderImages}
         />
       )}
 

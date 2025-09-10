@@ -53,5 +53,15 @@ export default function useProductImages(productId) {
     }
   };
 
-  return { images, loading, reload, deleteImage, setMainImage };
+  // 🆕 Guardar orden en backend
+    const reorderImages = async (orders) => {
+      try {
+        const res = await api.post(`/products/reorder-product-images.php`, { orders });
+        if (res?.data?.success) reload();
+      } catch (err) {
+        console.error("Error reordenando imágenes:", err);
+      }
+    };
+
+  return { images, loading, reload, deleteImage, setMainImage, reorderImages };
 }
