@@ -6,7 +6,7 @@ $conn = new mysqli(
   $env['DB_HOST'],
   $env['DB_USER'],
   $env['DB_PASS'],
-  $env['DB_NAME'],  // <- ya NO va hardcodeado
+  $env['DB_NAME'],  
   $env['DB_PORT']
 );
 

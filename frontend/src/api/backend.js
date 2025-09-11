@@ -1,8 +1,7 @@
-// api/backend.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost/SistemaDeInventario/backend',
+  baseURL: import.meta.env.VITE_API_URL, // 👈 ahora lee del .env
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -25,7 +24,6 @@ export async function uploadProductImage(productId, file) {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    // Si el PHP no manda JSON válido, res.data podría no ser objeto
     if (res && res.data && typeof res.data === 'object') {
       return {
         success: !!res.data.success,
@@ -34,10 +32,8 @@ export async function uploadProductImage(productId, file) {
       };
     }
 
-    // Fallback si vino algo raro
     return { success: false, data: null, error: 'Respuesta no válida del servidor' };
   } catch (e) {
-    // Axios error: intentar leer respuesta del server
     const serverMsg =
       e?.response?.data?.error ||
       e?.response?.data?.message ||
@@ -48,3 +44,4 @@ export async function uploadProductImage(productId, file) {
 }
 
 export default api;
+
