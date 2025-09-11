@@ -4,7 +4,7 @@
 // ----------------------------------------------
 import { NavLink, Outlet } from 'react-router-dom';
 
-export default function MainLayout() {
+export default function AdminLayout() {
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 bg-gray-900 text-white p-4 space-y-3">
