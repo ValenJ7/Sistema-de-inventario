@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import useSales from "../hooks/useSales";
 import useProducts from "../../products/hooks/useProducts";
+import AlertModal from "../../../ui/AlertModal";
+import ConfirmModal from "../../../ui/ConfirmModal";
+import Toast from "../../../ui/Toast";
 
 export default function SalesPage() {
   const { sales, loading, createSale, getSales } = useSales();
   const { products, reload: reloadProducts } = useProducts();
 
   const [cart, setCart] = useState([]);
+  const [alert, setAlert] = useState(null); // { type, message }
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const [toast, setToast] = useState(null); // { type, message }
 
   // 🔹 Cargar ventas al inicio
   useEffect(() => {
@@ -18,33 +24,84 @@ export default function SalesPage() {
     setCart((prev) => {
       const exists = prev.find((p) => p.product_id === product.id);
       if (exists) {
+        const maxStock = product.stock;
+        if (exists.quantity + 1 > maxStock) {
+          setAlert({
+            type: "warning",
+            message: `Stock insuficiente: solo hay ${maxStock} unidades de "${product.name}"`,
+          });
+          return prev;
+        }
         return prev.map((p) =>
           p.product_id === product.id
             ? { ...p, quantity: p.quantity + 1 }
             : p
         );
       }
-      return [...prev, { product_id: product.id, name: product.name, price: product.price, quantity: 1 }];
+      return [
+        ...prev,
+        {
+          product_id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+        },
+      ];
     });
   };
 
   // 🔹 Cambiar cantidad
   const updateQty = (id, qty) => {
     setCart((prev) =>
-      prev.map((p) =>
-        p.product_id === id ? { ...p, quantity: Number(qty) } : p
-      )
+      prev.map((p) => {
+        if (p.product_id === id) {
+          const product = products.find((pr) => pr.id === id);
+          const maxStock = product?.stock ?? 0;
+          const newQty = Math.min(Number(qty), maxStock);
+          if (Number(qty) > maxStock) {
+            setAlert({
+              type: "warning",
+              message: `Solo hay ${maxStock} unidades disponibles de "${product.name}"`,
+            });
+          }
+          return { ...p, quantity: newQty };
+        }
+        return p;
+      })
     );
   };
 
-  // 🔹 Eliminar del carrito
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((p) => p.product_id !== id));
+  // 🔹 Pedir confirmación antes de eliminar
+  const requestRemove = (id) => {
+    const product = cart.find((p) => p.product_id === id);
+    setConfirm({
+      message: `¿Seguro que querés eliminar "${product?.name}" del carrito?`,
+      onConfirm: () => {
+        setCart((prev) => prev.filter((p) => p.product_id !== id));
+        setConfirm(null);
+        setToast({ type: "info", message: "🗑️ Producto eliminado del carrito" });
+      },
+    });
   };
 
   // 🔹 Confirmar venta
   const confirmSale = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      setAlert({ type: "warning", message: "⚠️ El carrito está vacío" });
+      return;
+    }
+
+    for (const item of cart) {
+      const product = products.find((p) => p.id === item.product_id);
+      if (product && item.quantity > product.stock) {
+        setAlert({
+          type: "warning",
+          message: `Stock insuficiente: ${product.name} (Stock: ${product.stock})`,
+        });
+        return;
+      }
+    }
+
     const items = cart.map((c) => ({
       product_id: c.product_id,
       quantity: c.quantity,
@@ -52,12 +109,15 @@ export default function SalesPage() {
 
     const res = await createSale(items);
     if (res?.success) {
-      alert(`Venta registrada (ID: ${res.data.sale_id}) Total: $${res.data.total}`);
+      setAlert({
+        type: "success",
+        message: `✅ Venta registrada (ID: ${res.data.sale_id}) Total: $${res.data.total}`,
+      });
       setCart([]);
-      getSales();       // refrescar listado
-      reloadProducts(); // refrescar stock
+      getSales();
+      reloadProducts();
     } else {
-      alert("Error al registrar venta");
+      setAlert({ type: "error", message: "❌ Error al registrar venta" });
     }
   };
 
@@ -118,7 +178,7 @@ export default function SalesPage() {
                   <td className="p-2 border">${c.price * c.quantity}</td>
                   <td className="p-2 border">
                     <button
-                      onClick={() => removeFromCart(c.product_id)}
+                      onClick={() => requestRemove(c.product_id)}
                       className="px-2 py-1 bg-red-600 text-white rounded text-sm"
                     >
                       X
@@ -167,6 +227,33 @@ export default function SalesPage() {
           </table>
         )}
       </div>
+
+      {/* ⚠️ Modal de alerta */}
+      {alert && (
+        <AlertModal
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert(null)}
+        />
+      )}
+
+      {/* 🔴 Modal de confirmación */}
+      {confirm && (
+        <ConfirmModal
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {/* 🍞 Toast (avisos rápidos) */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
