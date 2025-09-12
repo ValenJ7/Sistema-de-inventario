@@ -1,21 +1,17 @@
 import { useState } from "react";
 import ProductCard from "../components/ProductCard";
-import { useProducts } from "../hooks";
-import { useCategories } from "../hooks";
+import { useProducts, useCategories } from "../hooks";
 
 export default function Tienda() {
-  // Estado para categoría y búsqueda
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Traemos productos con filtros + paginación
   const { products, loading, hasMore, loadMore } = useProducts({
     ...(selectedCategory ? { category: selectedCategory } : {}),
     ...(searchTerm ? { q: searchTerm } : {}),
-    size: 6, // cantidad por página
+    size: 8, // 🔹 ahora pedimos 8 productos
   });
 
-  // Traemos todas las categorías
   const { categories, loading: loadingCategories } = useCategories();
 
   if (loading && products.length === 0) return <p>Cargando...</p>;
@@ -27,7 +23,6 @@ export default function Tienda() {
 
       {/* 🔹 Filtros responsivos */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {/* Buscador */}
         <input
           type="text"
           placeholder="Buscar producto..."
@@ -36,7 +31,6 @@ export default function Tienda() {
           className="border rounded px-3 py-2 w-full sm:flex-1"
         />
 
-        {/* Select de categorías */}
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
@@ -56,7 +50,7 @@ export default function Tienda() {
         <p>No hay productos disponibles.</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

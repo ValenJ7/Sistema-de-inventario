@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import api from "../../../api/backend"; // instancia axios
 
+// 🔹 Hook para listado de productos (con paginación y "mostrar más")
 export function useProducts(initialParams = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const size = initialParams.size || 6; // cantidad por página
+  const size = initialParams.size || 8;
   const filters = { ...initialParams };
 
-  // 🔹 Cargar productos de la página actual
   async function fetchProducts(pageToLoad = 1, append = false) {
     try {
       setLoading(true);
@@ -26,7 +26,6 @@ export function useProducts(initialParams = {}) {
         setProducts(data);
       }
 
-      // Si la cantidad recibida es menor al size → no hay más productos
       setHasMore(data.length === size);
     } catch (err) {
       console.error("Error cargando productos", err);
@@ -35,14 +34,12 @@ export function useProducts(initialParams = {}) {
     }
   }
 
-  // 🔹 Primera carga o cuando cambian filtros
   useEffect(() => {
     setPage(1);
     fetchProducts(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(filters)]);
 
-  // 🔹 Función para cargar más
   function loadMore() {
     const nextPage = page + 1;
     setPage(nextPage);
@@ -52,7 +49,7 @@ export function useProducts(initialParams = {}) {
   return { products, loading, hasMore, loadMore };
 }
 
-// 🔹 Hook para traer detalle de un producto por slug
+// 🔹 Hook para un único producto por slug
 export function useProduct(slug) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
