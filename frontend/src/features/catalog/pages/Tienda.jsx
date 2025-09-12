@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ProductCard from "../components/ProductCard";
-import { useProducts, useCategories } from "../hooks/useCatalog";
+import { useProducts, useCategories } from "../hooks";
 
 export default function Tienda() {
   // Estado para categoría y búsqueda

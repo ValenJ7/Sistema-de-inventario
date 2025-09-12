@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useProduct } from "../hooks/useCatalog";
+import { useProduct } from "../hooks";
 import { getImageUrl } from "../../../utils/getImageUrl";
 
 export default function Producto() {
