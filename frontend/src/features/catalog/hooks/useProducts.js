@@ -1,27 +1,55 @@
 import { useState, useEffect } from "react";
 import api from "../../../api/backend"; // instancia axios
 
-// 🔹 Hook para traer listado de productos con filtros
-export function useProducts(params = {}) {
+export function useProducts(initialParams = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await api.get("/catalog/products.php", { params });
-        console.log("👉 respuesta productos:", res.data);
-        setProducts(Array.isArray(res.data) ? res.data : res.data.data || []);
-      } catch (err) {
-        console.error("Error cargando productos", err);
-      } finally {
-        setLoading(false);
+  const size = initialParams.size || 6; // cantidad por página
+  const filters = { ...initialParams };
+
+  // 🔹 Cargar productos de la página actual
+  async function fetchProducts(pageToLoad = 1, append = false) {
+    try {
+      setLoading(true);
+      const res = await api.get("/catalog/products.php", {
+        params: { ...filters, page: pageToLoad, size },
+      });
+
+      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+
+      if (append) {
+        setProducts((prev) => [...prev, ...data]);
+      } else {
+        setProducts(data);
       }
-    }
-    fetchProducts();
-  }, [JSON.stringify(params)]);
 
-  return { products, loading, setProducts };
+      // Si la cantidad recibida es menor al size → no hay más productos
+      setHasMore(data.length === size);
+    } catch (err) {
+      console.error("Error cargando productos", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 🔹 Primera carga o cuando cambian filtros
+  useEffect(() => {
+    setPage(1);
+    fetchProducts(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters)]);
+
+  // 🔹 Función para cargar más
+  function loadMore() {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchProducts(nextPage, true);
+  }
+
+  return { products, loading, hasMore, loadMore };
 }
 
 // 🔹 Hook para traer detalle de un producto por slug
