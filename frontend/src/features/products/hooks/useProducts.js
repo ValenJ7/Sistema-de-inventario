@@ -12,7 +12,7 @@ export default function useProducts() {
     try {
       setLoading(true);
       // Gracias al interceptor de api, res.data ya es un ARRAY cuando el backend devuelve {success,data:[...]}
-      const res = await api.get(`/products/get-products.php?t=${Date.now()}`);
+      const res = await api.get(`/admin/products/get-products.php?t=${Date.now()}`);
       const items = Array.isArray(res.data) ? res.data : [];
       setProducts(items);
     } catch (error) {
@@ -39,7 +39,7 @@ export default function useProducts() {
   // ✅ Crear SIN recargar: devolvemos el id y que el form recargue al final
   const addProduct = async (data) => {
     try {
-      const res = await api.post('/products/create-product.php', normalizeProduct(data));
+      const res = await api.post('/admin/products/create-product.php', normalizeProduct(data));
       const id = res?.data?.data?.id ?? null; // { success, data: { id, ... } }
       return id;
     } catch (error) {
@@ -53,7 +53,7 @@ export default function useProducts() {
     try {
       const payload = normalizeProduct(data);
       if (!payload.id) throw new Error('Falta id');
-      await api.post('/products/update-product.php', payload);
+      await api.post('/admin/products/update-product.php', payload);
       await loadProducts();
     } catch (error) {
       console.error('Error al actualizar producto:', error);
@@ -62,7 +62,7 @@ export default function useProducts() {
 
   const deleteProduct = async (id) => {
     try {
-      await api.delete(`/products/delete-product.php?id=${id}`);
+      await api.delete(`/admin/products/delete-product.php?id=${id}`);
       // Optimista: si fallara, el reload siguiente lo corrige
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {

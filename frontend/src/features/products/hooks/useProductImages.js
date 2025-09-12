@@ -18,7 +18,7 @@ export default function useProductImages(productId) {
     }
     setLoading(true);
     api
-      .get(`/products/get-product-images.php?product_id=${productId}`)
+      .get(`/admin/products/get-product-images.php?product_id=${productId}`)
       .then((res) => {
         // El backend devuelve array directo vía json_ok
         if (Array.isArray(res.data)) setImages(res.data);
@@ -34,7 +34,7 @@ export default function useProductImages(productId) {
   // 🗑 Borrar imagen
   const deleteImage = async (id) => {
     try {
-      await api.delete(`/products/delete-product-image.php?id=${id}`);
+      await api.delete(`/admin/products/delete-product-image.php?id=${id}`);
       reload();
     } catch (err) {
       console.error("Error borrando imagen:", err);
@@ -46,7 +46,7 @@ export default function useProductImages(productId) {
     try {
       const fd = new FormData();
       fd.append("id", id);
-      await api.post(`/products/set-main-product-image.php`, fd, {
+      await api.post(`/admin/products/set-main-product-image.php`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       reload();
@@ -58,7 +58,7 @@ export default function useProductImages(productId) {
   // 🔀 Reordenar imágenes
   const reorderImages = async (orders) => {
     try {
-      await api.post(`/products/reorder-product-images.php`, { orders });
+      await api.post(`/admin/products/reorder-product-images.php`, { orders });
       reload();
     } catch (err) {
       console.error("Error reordenando imágenes:", err);

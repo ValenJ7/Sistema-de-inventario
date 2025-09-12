@@ -11,7 +11,7 @@ export default function useCategories() {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/categories/get-categories.php?t=${Date.now()}`);
+      const res = await api.get(`/admin/categories/get-categories.php?t=${Date.now()}`);
       // Con el interceptor, res.data ya es ARRAY si backend envía {success,data:[...]}
       const items = Array.isArray(res.data) ? res.data : [];
       setCategories(items);
@@ -27,7 +27,7 @@ export default function useCategories() {
 
   const addCategory = async (payload) => {
     try {
-      await api.post('/categories/create-category.php', payload);
+      await api.post('/admin/categories/create-category.php', payload);
       await loadCategories();
     } catch (err) {
       console.error('Error creando categoría:', err);
@@ -36,7 +36,7 @@ export default function useCategories() {
 
   const updateCategory = async (payload) => {
     try {
-      await api.put('/categories/update-category.php', payload);
+      await api.put('/admin/categories/update-category.php', payload);
       await loadCategories();
     } catch (err) {
       console.error('Error actualizando categoría:', err);
@@ -45,7 +45,7 @@ export default function useCategories() {
 
   const deleteCategory = async (id) => {
     try {
-      await api.delete(`/categories/delete-category.php?id=${id}`);
+      await api.delete(`/admin/categories/delete-category.php?id=${id}`);
       setCategories((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
       console.error('Error eliminando categoría:', err);

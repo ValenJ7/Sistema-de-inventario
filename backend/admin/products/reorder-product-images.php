@@ -1,7 +1,7 @@
 <?php
-require __DIR__ . '/../http/cors.php';
-require __DIR__ . '/../http/json.php';
-require __DIR__ . '/../db.php';
+require __DIR__ . '/../../http/cors.php';
+require __DIR__ . '/../../http/json.php';
+require __DIR__ . '/../../db.php';
 
 try {
   if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

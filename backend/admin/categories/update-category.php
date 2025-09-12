@@ -1,9 +1,9 @@
 <?php
-require __DIR__ . '/../http/cors.php';
-require __DIR__ . '/../http/json.php';
-require __DIR__ . '/../db.php';
-require __DIR__ . '/../lib/strings.php';
-require __DIR__ . '/../lib/slug_unique_mysqli.php';
+require __DIR__ . '/../../http/cors.php';
+require __DIR__ . '/../../http/json.php';
+require __DIR__ . '/../../db.php';
+require __DIR__ . '/../../lib/strings.php';
+require __DIR__ . '/../../lib/slug_unique_mysqli.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') json_error('Método no permitido', 405);

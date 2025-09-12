@@ -30,7 +30,7 @@ export default function ProductForm({
 
   // Cargar categorías
   useEffect(() => {
-    api.get('/categories/get-categories.php')
+      api.get('/admin/categories/get-categories.php')
       .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
       .catch((err) => console.error('Error cargando categorías:', err));
   }, []);

@@ -1,7 +1,7 @@
 <?php
-require __DIR__ . '/../http/cors.php';
-require __DIR__ . '/../http/json.php';
-require __DIR__ . '/../db.php'; // debe exponer $conn (mysqli)
+require __DIR__ . '/../../http/cors.php';
+require __DIR__ . '/../../http/json.php';
+require __DIR__ . '/../../db.php'; // debe exponer $conn (mysqli)
 
 try {
   if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
