@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') json_error('Método no permitido', 405
 $saleId = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : 0;
 if ($saleId <= 0) json_error("sale_id requerido", 400);
 
-// 🔹 Buscar la venta
+// Venta
 $stmt = $conn->prepare("SELECT id, created_at, total FROM sales WHERE id = ?");
 $stmt->bind_param("i", $saleId);
 $stmt->execute();
@@ -21,22 +21,29 @@ if (!$sale) {
   json_error("Venta no encontrada", 404);
 }
 
-// 🔹 Buscar ítems con producto e imagen
+// Ítems + producto + imagen principal (talle desde sale_items)
 $stmt = $conn->prepare("
-  SELECT si.id, si.product_id, p.name AS product_name, p.size,
-         si.quantity, si.price, si.subtotal,
-         pi.url AS image_url
+  SELECT
+    si.id,
+    si.product_id,
+    p.name AS product_name,
+    si.size,
+    si.quantity,
+    si.price,
+    si.subtotal,
+    pi.url AS image_url
   FROM sale_items si
   LEFT JOIN products p ON p.id = si.product_id
   LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.sort_order = 0
   WHERE si.sale_id = ?
+  ORDER BY si.id ASC
 ");
 $stmt->bind_param("i", $saleId);
 $stmt->execute();
 $res = $stmt->get_result();
+
 $items = [];
 while ($row = $res->fetch_assoc()) {
-  // armar URL absoluta para la imagen
   $row['image_url'] = $row['image_url']
     ? "http://localhost/SistemaDeInventario/backend" . $row['image_url']
     : null;
@@ -44,12 +51,11 @@ while ($row = $res->fetch_assoc()) {
 }
 $stmt->close();
 
-// 🔹 Devolver la venta con items
 $data = [
-  'id' => $sale['id'],
+  'id'         => (int)$sale['id'],
   'created_at' => $sale['created_at'],
-  'total' => $sale['total'],
-  'items' => $items
+  'total'      => (float)$sale['total'],
+  'items'      => $items
 ];
 
 json_ok($data);

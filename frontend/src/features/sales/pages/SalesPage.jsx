@@ -6,6 +6,11 @@ import AlertModal from "../../../ui/AlertModal";
 import ConfirmModal from "../../../ui/ConfirmModal";
 import Toast from "../../../ui/Toast";
 
+function formatMoney(n) {
+  const val = Number(n ?? 0);
+  return val.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
+}
+
 export default function SalesPage() {
   const { sales, loading, createSale, getSales } = useSales();
   const { products, reload: reloadProducts } = useProducts();
@@ -18,14 +23,14 @@ export default function SalesPage() {
   const [selectedSaleId, setSelectedSaleId] = useState(null); // id venta
   const { sale, loading: loadingItems, error } = useSaleItems(selectedSaleId); // hook detalle
 
-  const [selectedImage, setSelectedImage] = useState(null); // 👈 imagen ampliada
+  const [selectedImage, setSelectedImage] = useState(null); // imagen ampliada
 
-  // 🔹 Cargar ventas al inicio
+  // Cargar ventas al inicio
   useEffect(() => {
     getSales();
   }, []);
 
-  // 🔹 Agregar producto al carrito
+  // Agregar producto al carrito
   const addToCart = (product) => {
     setCart((prev) => {
       const exists = prev.find((p) => p.product_id === product.id);
@@ -54,7 +59,7 @@ export default function SalesPage() {
     });
   };
 
-  // 🔹 Cambiar cantidad
+  // Cambiar cantidad
   const updateQty = (id, qty) => {
     setCart((prev) =>
       prev.map((p) => {
@@ -75,7 +80,7 @@ export default function SalesPage() {
     );
   };
 
-  // 🔹 Pedir confirmación antes de eliminar
+  // Pedir confirmación antes de eliminar
   const requestRemove = (id) => {
     const product = cart.find((p) => p.product_id === id);
     setConfirm({
@@ -88,7 +93,7 @@ export default function SalesPage() {
     });
   };
 
-  // 🔹 Confirmar venta
+  // Confirmar venta
   const confirmSale = async () => {
     if (cart.length === 0) {
       setAlert({ type: "warning", message: "⚠️ El carrito está vacío" });
@@ -115,7 +120,7 @@ export default function SalesPage() {
     if (res?.success) {
       setAlert({
         type: "success",
-        message: `✅ Venta registrada (ID: ${res.data.sale_id}) Total: $${res.data.total}`,
+        message: `✅ Venta registrada (ID: ${res.data.sale_id}) Total: ${formatMoney(res.data.total)}`,
       });
       setCart([]);
       getSales();
@@ -129,14 +134,14 @@ export default function SalesPage() {
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Gestión de Ventas (POS)</h1>
 
-      {/* 🔎 Productos disponibles */}
+      {/* Productos */}
       <div>
         <h2 className="text-lg font-semibold mb-2">Productos</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {products.map((p) => (
             <div key={p.id} className="border p-2 rounded shadow-sm">
               <h3 className="font-semibold">{p.name}</h3>
-              <p className="text-sm text-gray-600">${p.price}</p>
+              <p className="text-sm text-gray-600">{formatMoney(p.price)}</p>
               <p className="text-xs text-gray-500">Stock: {p.stock}</p>
               <button
                 className="mt-2 px-2 py-1 bg-blue-600 text-white rounded text-sm"
@@ -149,7 +154,7 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* 🛒 Carrito */}
+      {/* Carrito */}
       <div>
         <h2 className="text-lg font-semibold mb-2">Carrito</h2>
         {cart.length === 0 ? (
@@ -169,7 +174,7 @@ export default function SalesPage() {
               {cart.map((c) => (
                 <tr key={c.product_id}>
                   <td className="p-2 border">{c.name}</td>
-                  <td className="p-2 border">${c.price}</td>
+                  <td className="p-2 border">{formatMoney(c.price)}</td>
                   <td className="p-2 border">
                     <input
                       type="number"
@@ -179,7 +184,7 @@ export default function SalesPage() {
                       className="w-16 border rounded p-1"
                     />
                   </td>
-                  <td className="p-2 border">${c.price * c.quantity}</td>
+                  <td className="p-2 border">{formatMoney(c.price * c.quantity)}</td>
                   <td className="p-2 border">
                     <button
                       onClick={() => requestRemove(c.product_id)}
@@ -203,7 +208,7 @@ export default function SalesPage() {
         )}
       </div>
 
-      {/* 📜 Historial de ventas */}
+      {/* Historial de ventas */}
       <div>
         <h2 className="text-lg font-semibold mb-2">Ventas recientes</h2>
         {loading ? (
@@ -225,7 +230,7 @@ export default function SalesPage() {
                 <tr key={s.id}>
                   <td className="p-2 border">{s.id}</td>
                   <td className="p-2 border">{s.created_at}</td>
-                  <td className="p-2 border">${s.total}</td>
+                  <td className="p-2 border">{formatMoney(s.total)}</td>
                   <td className="p-2 border text-center">
                     <button
                       onClick={() => setSelectedSaleId(s.id)}
@@ -241,15 +246,13 @@ export default function SalesPage() {
         )}
       </div>
 
-      {/* 🔍 Modal detalle de venta */}
+      {/* Modal detalle de venta */}
       {selectedSaleId && (
         <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center border-b pb-2 mb-3">
-              <h3 className="text-xl font-bold">
-                Detalle de venta #{selectedSaleId}
-              </h3>
+              <h3 className="text-xl font-bold">Detalle de venta #{selectedSaleId}</h3>
               <button
                 className="text-gray-500 hover:text-gray-700"
                 onClick={() => setSelectedSaleId(null)}
@@ -259,18 +262,17 @@ export default function SalesPage() {
             </div>
 
             {/* Info general */}
-            <p className="text-sm text-gray-500 mb-1">Fecha: {sale?.created_at}</p>
+            <p className="text-sm text-gray-500 mb-1">
+              {loadingItems ? "Cargando..." : `Fecha: ${sale?.created_at ?? "-"}`}
+            </p>
             <p className="text-lg font-semibold mb-4 text-green-600">
-              Total: ${sale?.total}
+              Total: {formatMoney(sale?.total)}
             </p>
 
             {/* Lista de ítems */}
             <div className="space-y-2">
-              {sale?.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-gray-50"
-                >
+              {(sale?.items ?? []).map((item) => (
+                <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
                   {item.image_url && (
                     <img
                       src={item.image_url}
@@ -282,17 +284,18 @@ export default function SalesPage() {
                   <div className="flex-1">
                     <p className="font-medium truncate">{item.product_name}</p>
                     <p className="text-sm text-gray-600">
-                      {item.size} — {item.quantity} x ${item.price} = ${item.subtotal}
+                      {item.size ?? "-"} — {item.quantity} × {formatMoney(item.price)} = {formatMoney(item.subtotal)}
                     </p>
                   </div>
                 </div>
               ))}
+              {error && <p className="text-sm text-red-600">{error}</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/* 🖼 Modal de imagen ampliada */}
+      {/* Modal de imagen ampliada */}
       {selectedImage && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="relative">
@@ -311,16 +314,12 @@ export default function SalesPage() {
         </div>
       )}
 
-      {/* ⚠️ Modal de alerta */}
+      {/* Modal de alerta */}
       {alert && (
-        <AlertModal
-          type={alert.type}
-          message={alert.message}
-          onClose={() => setAlert(null)}
-        />
+        <AlertModal type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
       )}
 
-      {/* 🔴 Modal de confirmación */}
+      {/* Modal de confirmación */}
       {confirm && (
         <ConfirmModal
           message={confirm.message}
@@ -329,14 +328,8 @@ export default function SalesPage() {
         />
       )}
 
-      {/* 🍞 Toast (avisos rápidos) */}
-      {toast && (
-        <Toast
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {/* Toast */}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     </div>
   );
 }

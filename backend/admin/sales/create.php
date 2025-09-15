@@ -13,34 +13,42 @@ if (!$input || !isset($input['items']) || !is_array($input['items']) || count($i
 }
 
 $items = $input['items'];
-$total = 0;
 foreach ($items as $it) {
     if (!isset($it['product_id'], $it['quantity'])) {
         json_error("Item inválido", 400);
     }
 }
 
-// Transacción
 $conn->begin_transaction();
 
 try {
-    // Calcular total desde DB (para evitar precios manipulados)
-    foreach ($items as &$it) {
+    // Calcular total desde DB y congelar price + size
+    $total = 0;
+    foreach ($items as $idx => $it) {
         $pid = (int)$it['product_id'];
         $qty = (int)$it['quantity'];
 
-        $stmt = $conn->prepare("SELECT price, stock FROM products WHERE id = ?");
+        // Traemos price, stock y size del producto actual
+        $stmt = $conn->prepare("SELECT price, stock, size FROM products WHERE id = ?");
         $stmt->bind_param("i", $pid);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
         if (!$res) throw new Exception("Producto $pid no encontrado");
-        if ($res['stock'] < $qty) throw new Exception("Stock insuficiente para producto $pid");
+        if ((int)$res['stock'] < $qty) throw new Exception("Stock insuficiente para producto $pid");
 
-        $it['price'] = (float)$res['price'];
-        $it['subtotal'] = $it['price'] * $qty;
-        $total += $it['subtotal'];
+        $price    = (float)$res['price'];
+        $size     = isset($res['size']) ? (string)$res['size'] : '';
+        if ($size === null) $size = ''; // por si cambia la definición
+        $subtotal = $price * $qty;
+
+        // Guardamos en el array sin referencias
+        $items[$idx]['price']    = $price;
+        $items[$idx]['size']     = $size;
+        $items[$idx]['subtotal'] = $subtotal;
+
+        $total += $subtotal;
     }
 
     // Insertar venta
@@ -52,8 +60,20 @@ try {
 
     // Insertar ítems y actualizar stock
     foreach ($items as $it) {
-        $stmt = $conn->prepare("INSERT INTO sale_items (sale_id, product_id, quantity, price, subtotal) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("iiidd", $saleId, $it['product_id'], $it['quantity'], $it['price'], $it['subtotal']);
+        $stmt = $conn->prepare("
+          INSERT INTO sale_items (sale_id, product_id, size, quantity, price, subtotal)
+          VALUES (?, ?, ?, ?, ?, ?)
+        ");
+        // i i s i d d
+        $stmt->bind_param(
+            "iisidd",
+            $saleId,
+            $it['product_id'],
+            $it['size'],
+            $it['quantity'],
+            $it['price'],
+            $it['subtotal']
+        );
         $stmt->execute();
         $stmt->close();
 
