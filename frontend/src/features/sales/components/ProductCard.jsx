@@ -38,11 +38,17 @@ export default function ProductCard({ product, inCartQty = 0, onAdd, onInc, onDe
 
         <div className="mt-2">
           {out ? (
-            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-red-100 text-red-700">Sin stock</span>
+            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-red-100 text-red-700">
+              Sin stock
+            </span>
           ) : low ? (
-            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">Stock: {product.stock}</span>
+            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">
+              Stock: {product.stock}
+            </span>
           ) : (
-            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">Stock: {product.stock}</span>
+            <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
+              Stock: {product.stock}
+            </span>
           )}
         </div>
 

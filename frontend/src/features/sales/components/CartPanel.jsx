@@ -34,9 +34,7 @@ export default function CartPanel({
           <p className="text-gray-500">No hay productos en el carrito.</p>
         ) : (
           <div className="space-y-3">
-            {cart.map((c) => (
-              <CartItems items={cart} onDec={onDec} onInc={onInc} onRemove={onRemove} />
-            ))}
+            <CartItems items={cart} onDec={onDec} onInc={onInc} onRemove={onRemove} />
 
             {/* Totales */}
             <div className="mt-2 pt-2 border-t text-sm">
