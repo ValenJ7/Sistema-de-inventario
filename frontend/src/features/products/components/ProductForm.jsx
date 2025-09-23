@@ -13,6 +13,7 @@ export default function ProductForm({
   onAddProduct,
   onUpdateProduct,
   reload,
+  onFinished, // 👈 callback para cerrar modal
 }) {
   const [form, setForm] = useState({
     id: null,
@@ -29,7 +30,7 @@ export default function ProductForm({
   const [preview, setPreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
 
-  // Hook de imágenes
+  // Hook de imágenes (galería cuando ya existe el producto)
   const { images, deleteImage, setMainImage, reorderImages } = useProductImages(
     form.id
   );
@@ -37,7 +38,7 @@ export default function ProductForm({
   // Cargar categorías
   useEffect(() => {
     api
-      .get("/admin/categories/get-categories.php")
+      .get("admin/categories/get-categories.php")
       .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
       .catch((err) => console.error("Error cargando categorías:", err));
   }, []);
@@ -59,19 +60,25 @@ export default function ProductForm({
         selectedProduct.image_path ?? selectedProduct.main_image ?? null;
       setCurrentImage(path ? `${BACKEND_BASE}${path}` : null);
 
-      // traer variantes
+      // traer variantes del backend
       api
         .get(
-          `/admin/products/get-product-variants.php?product_id=${selectedProduct.id}`
+          `admin/products/get-product-variants.php?product_id=${selectedProduct.id}`
         )
         .then((res) => {
           if (Array.isArray(res.data) && res.data.length > 0) {
-            setVariants(res.data.map((v) => ({ label: v.label, stock: v.stock })));
+            setVariants(
+              res.data.map((v) => ({
+                label: (v.label || "").trim(),
+                stock: Number(v.stock) || 0,
+              }))
+            );
           } else {
+            // fallback legacy
             setVariants([
               {
                 label: selectedProduct.size || "Único",
-                stock: selectedProduct.stock || 0,
+                stock: Number(selectedProduct.stock) || 0,
               },
             ]);
           }
@@ -85,6 +92,7 @@ export default function ProductForm({
       setPreview(null);
       setFile(null);
     } else {
+      // modo agregar
       setForm({ id: null, name: "", category_id: "", price: "" });
       setVariants([{ label: "", stock: 0 }]);
       if (preview) URL.revokeObjectURL(preview);
@@ -113,7 +121,6 @@ export default function ProductForm({
       setPreview(null);
       return;
     }
-
     const url = URL.createObjectURL(file);
     setFile(file);
     setPreview(url);
@@ -127,7 +134,6 @@ export default function ProductForm({
   };
 
   const addVariant = () => setVariants([...variants, { label: "", stock: 0 }]);
-
   const removeVariant = (index) =>
     setVariants((prev) => prev.filter((_, i) => i !== index));
 
@@ -136,6 +142,7 @@ export default function ProductForm({
     let productId = selectedProduct?.id ?? null;
 
     try {
+      // crear / actualizar producto
       if (selectedProduct) {
         await onUpdateProduct({ ...form, id: productId ?? form.id });
         productId = productId ?? form.id;
@@ -145,78 +152,82 @@ export default function ProductForm({
 
       // guardar variantes
       if (productId) {
-        await api.post("/admin/products/set-product-variants.php", {
+        const payload = {
           product_id: productId,
-          variants: variants.map((v, i) => ({
-            label: v.label.trim(),
-            stock: Number(v.stock) || 0,
-            sort_order: i,
-          })),
-        });
+          variants: variants
+            .map((v, i) => ({
+              label: (v.label || "").trim(),
+              stock: Number(v.stock) || 0,
+              sort_order: i,
+            }))
+            .filter((v) => v.label.length > 0), // evitar variantes vacías
+        };
+        await api.post("admin/products/set-product-variants.php", payload);
       }
 
-      // subir imagen
+      // subir imagen (opcional)
       if (file && productId) {
         const r = await uploadProductImage(productId, file);
         if (!r?.success) console.error("Error subiendo imagen:", r?.error);
       }
 
+      // recargar listado y cerrar modal
       if (typeof reload === "function") await reload(Date.now());
+      if (typeof onFinished === "function") onFinished();
+
+      // Limpieza (por si el modal no se cerrara por algún motivo)
+      if (preview) URL.revokeObjectURL(preview);
+      setFile(null);
+      setPreview(null);
+      setCurrentImage(null);
+      setVariants([{ label: "", stock: 0 }]);
+      setForm({ id: null, name: "", category_id: "", price: "" });
+      // ⚠️ No hacemos setSelectedProduct(null) acá porque el modal ya se cierra arriba
     } catch (err) {
       console.error("Error en submit:", err);
     }
-
-    if (preview) URL.revokeObjectURL(preview);
-    setForm({ id: null, name: "", category_id: "", price: "" });
-    setVariants([{ label: "", stock: 0 }]);
-    setSelectedProduct(null);
-    setFile(null);
-    setPreview(null);
-    setCurrentImage(null);
   };
 
   return (
     <form onSubmit={handleSubmit} className="mb-8 max-w-lg mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">
-        {selectedProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
-      </h2>
-
       <input type="hidden" name="id" value={form.id ?? ""} readOnly />
 
-      <input
-        className="border p-2 rounded w-full"
-        type="text"
-        name="name"
-        placeholder="Nombre del Producto"
-        value={form.name}
-        onChange={handleChange}
-        required
-      />
-
-      <div className="flex gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <input
-          className="border p-2 rounded flex-1"
-          type="number"
-          name="price"
-          placeholder="Precio"
-          value={form.price}
+          className="border p-2 rounded w-full"
+          type="text"
+          name="name"
+          placeholder="Nombre del Producto"
+          value={form.name}
           onChange={handleChange}
           required
         />
 
-        <select
-          name="category_id"
-          className="border p-2 rounded flex-1"
-          value={form.category_id}
-          onChange={handleChange}
-        >
-          <option value="">Seleccionar categoría</option>
-          {categories.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-3">
+          <input
+            className="border p-2 rounded flex-1"
+            type="number"
+            name="price"
+            placeholder="Precio"
+            value={form.price}
+            onChange={handleChange}
+            required
+          />
+
+          <select
+            name="category_id"
+            className="border p-2 rounded flex-1"
+            value={form.category_id}
+            onChange={handleChange}
+          >
+            <option value="">Seleccionar categoría</option>
+            {categories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Variantes */}
@@ -238,11 +249,9 @@ export default function ProductForm({
               <input
                 className="border p-2 rounded flex-1"
                 type="text"
-                placeholder="Ej: S, M, L, XL, 1, 2, 3, Único, etc."
+                placeholder="Ej: S, M, L, XL, 1, 2, 3, Único"
                 value={v.label}
-                onChange={(e) =>
-                  handleVariantChange(i, "label", e.target.value)
-                }
+                onChange={(e) => handleVariantChange(i, "label", e.target.value)}
                 required
               />
               <input
@@ -250,9 +259,7 @@ export default function ProductForm({
                 type="number"
                 min="0"
                 value={v.stock}
-                onChange={(e) =>
-                  handleVariantChange(i, "stock", e.target.value)
-                }
+                onChange={(e) => handleVariantChange(i, "stock", e.target.value)}
                 required
               />
               <button
@@ -267,6 +274,15 @@ export default function ProductForm({
           ))}
         </div>
 
+        <div className="mt-3 text-xs text-gray-500 space-y-1">
+          <p className="font-medium">Ejemplos de talles:</p>
+          <ul className="list-disc list-inside">
+            <li>Ropa: XS, S, M, L, XL, XXL</li>
+            <li>Numéricos: 1, 2, 3, 4, 5, 6</li>
+            <li>Talle único: Único / One Size</li>
+            <li>Calzado: 35, 36, 37, 38, 39, 40</li>
+          </ul>
+        </div>
       </div>
 
       {/* Imagen principal */}
@@ -288,7 +304,7 @@ export default function ProductForm({
       <div className="flex justify-end gap-3 mt-4">
         <button
           type="button"
-          onClick={() => setSelectedProduct(null)}
+          onClick={() => (typeof onFinished === "function" ? onFinished() : null)}
           className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
         >
           Cancelar

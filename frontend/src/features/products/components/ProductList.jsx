@@ -20,6 +20,26 @@ function StockBadge({ state }) {
   );
 }
 
+// Normaliza variantes a [{label, stock?}] y filtra vacíos
+function normalizeVariants(p) {
+  const raw =
+    (Array.isArray(p?.variants_detail) && p.variants_detail) ||
+    (Array.isArray(p?.variants) && p.variants) ||
+    (Array.isArray(p?.variants_summary) && p.variants_summary) ||
+    [];
+
+  return raw
+    .map((v) => {
+      if (typeof v === "string") {
+        const [label, qty] = v.split(":").map((s) => s?.trim());
+        return { label: label || "", stock: qty !== undefined ? Number(qty) : undefined };
+      }
+      // objeto
+      return { label: (v?.label || "").trim(), stock: v?.stock };
+    })
+    .filter((v) => v.label.length > 0);
+}
+
 export default function ProductList({ products, onEdit, onDelete, reloadToken }) {
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow">
@@ -38,16 +58,14 @@ export default function ProductList({ products, onEdit, onDelete, reloadToken })
         <tbody className="divide-y divide-gray-100">
           {products.map((p) => {
             const src = buildImageSrc(p, reloadToken);
+            const variants = normalizeVariants(p);
+
             return (
               <tr key={p.id} className="hover:bg-gray-50">
                 {/* Producto */}
                 <td className="px-4 py-3 flex items-center gap-3">
                   {src ? (
-                    <img
-                      src={src}
-                      alt={p.name}
-                      className="h-12 w-12 object-cover rounded"
-                    />
+                    <img src={src} alt={p.name} className="h-12 w-12 object-cover rounded" />
                   ) : (
                     <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-gray-400">
                       —
@@ -67,13 +85,14 @@ export default function ProductList({ products, onEdit, onDelete, reloadToken })
 
                 {/* Talles disponibles */}
                 <td className="px-4 py-3 space-x-2">
-                  {Array.isArray(p.variants_summary) && p.variants_summary.length > 0 ? (
-                    p.variants_summary.map((v, i) => (
+                  {variants.length > 0 ? (
+                    variants.map((v, i) => (
                       <span
                         key={i}
                         className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
                       >
-                        {v.label}: {v.stock}
+                        {v.label}
+                        {typeof v.stock === "number" ? `: ${v.stock}` : ""}
                       </span>
                     ))
                   ) : (

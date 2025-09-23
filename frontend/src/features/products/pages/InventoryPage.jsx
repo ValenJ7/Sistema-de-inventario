@@ -15,8 +15,10 @@ export default function InventoryPage() {
     reload: fetchProducts,
   } = useProducts();
 
+  // 🔁 Token anti-cache para imágenes
   const [reloadToken, setReloadToken] = useState(0);
 
+  // Wrapper: setea token y vuelve a pedir productos
   const reload = (token) => {
     setReloadToken(token || Date.now());
     if (typeof fetchProducts === "function") fetchProducts();
@@ -49,7 +51,10 @@ export default function InventoryPage() {
       <ProductList
         products={products}
         onEdit={openModal}
-        onDelete={deleteProduct}
+        onDelete={async (id) => {
+          await deleteProduct(id);
+          reload();
+        }}
         reloadToken={reloadToken}
       />
 
@@ -61,6 +66,7 @@ export default function InventoryPage() {
             <button
               onClick={closeModal}
               className="absolute top-3 right-3 text-gray-500 hover:text-black"
+              aria-label="Cerrar"
             >
               ✕
             </button>
@@ -75,12 +81,14 @@ export default function InventoryPage() {
               onAddProduct={addProduct}
               onUpdateProduct={updateProduct}
               reload={reload}
+              onFinished={closeModal}   // 👈 cierra modal al terminar
             />
 
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={closeModal}
                 className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
+                type="button"
               >
                 Cancelar
               </button>
