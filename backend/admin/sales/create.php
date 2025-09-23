@@ -13,22 +13,36 @@ if (!$input || !isset($input['items']) || !is_array($input['items']) || count($i
 }
 
 $items = $input['items'];
+
+// 1️⃣ Consolidar productos repetidos (mismo product_id + size)
+$byKey = [];
 foreach ($items as $it) {
     if (!isset($it['product_id'], $it['quantity'])) {
         json_error("Item inválido", 400);
     }
+
+    $pid  = (int)$it['product_id'];
+    $qty  = (int)$it['quantity'];
+    $size = isset($it['size']) ? (string)$it['size'] : '';
+
+    $key = $pid . '|' . $size;
+    if (!isset($byKey[$key])) {
+        $byKey[$key] = ['product_id' => $pid, 'size' => $size, 'quantity' => 0];
+    }
+    $byKey[$key]['quantity'] += $qty;
 }
+$items = array_values($byKey);
 
 $conn->begin_transaction();
 
 try {
-    // Calcular total desde DB y congelar price + size
     $total = 0;
-    foreach ($items as $idx => $it) {
-        $pid = (int)$it['product_id'];
-        $qty = (int)$it['quantity'];
 
-        // Traemos price, stock y size del producto actual
+    // 2️⃣ Validar stock y calcular totales
+    foreach ($items as $idx => $it) {
+        $pid = $it['product_id'];
+        $qty = $it['quantity'];
+
         $stmt = $conn->prepare("SELECT price, stock, size FROM products WHERE id = ?");
         $stmt->bind_param("i", $pid);
         $stmt->execute();
@@ -39,11 +53,10 @@ try {
         if ((int)$res['stock'] < $qty) throw new Exception("Stock insuficiente para producto $pid");
 
         $price    = (float)$res['price'];
-        $size     = isset($res['size']) ? (string)$res['size'] : '';
-        if ($size === null) $size = ''; // por si cambia la definición
+        $size     = $it['size'] !== '' ? $it['size'] : ($res['size'] ?? '');
+        if ($size === null) $size = '';
         $subtotal = $price * $qty;
 
-        // Guardamos en el array sin referencias
         $items[$idx]['price']    = $price;
         $items[$idx]['size']     = $size;
         $items[$idx]['subtotal'] = $subtotal;
@@ -51,20 +64,19 @@ try {
         $total += $subtotal;
     }
 
-    // Insertar venta
+    // 3️⃣ Insertar venta
     $stmt = $conn->prepare("INSERT INTO sales (total) VALUES (?)");
     $stmt->bind_param("d", $total);
     $stmt->execute();
     $saleId = $stmt->insert_id;
     $stmt->close();
 
-    // Insertar ítems y actualizar stock
+    // 4️⃣ Insertar ítems y actualizar stock
     foreach ($items as $it) {
         $stmt = $conn->prepare("
           INSERT INTO sale_items (sale_id, product_id, size, quantity, price, subtotal)
           VALUES (?, ?, ?, ?, ?, ?)
         ");
-        // i i s i d d
         $stmt->bind_param(
             "iisidd",
             $saleId,
