@@ -1,17 +1,29 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // 👈 ahora lee del .env
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: import.meta.env.VITE_API_URL, // Debe terminar en /backend/
+  // NO fijes Content-Type global; lo seteamos por request
 });
 
-// Manténe tu interceptor si querés
+// Si querés “desenvolver” {success,data:[...]}, mantené esto robusto:
 api.interceptors.response.use((res) => {
-  const payload = res.data;
+  const payload = res?.data;
   if (payload && Array.isArray(payload.data)) {
     return { ...res, data: payload.data };
   }
   return res;
+});
+
+// SUGERENCIA: setear JSON sólo cuando el body NO es FormData
+api.interceptors.request.use((config) => {
+  const isForm = (config.data instanceof FormData);
+  if (!isForm) {
+    config.headers = {
+      ...(config.headers || {}),
+      'Content-Type': 'application/json',
+    };
+  }
+  return config;
 });
 
 export async function uploadProductImage(productId, file) {
@@ -20,19 +32,16 @@ export async function uploadProductImage(productId, file) {
     form.append('product_id', String(productId));
     form.append('image', file);
 
-    const res = await api.post('/products/upload-image.php', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Ruta SIN "/" inicial y con /admin/
+    const res = await api.post('admin/products/upload-image.php', form);
+    // NO pongas Content-Type a mano: el navegador agrega el boundary
 
-    if (res && res.data && typeof res.data === 'object') {
-      return {
-        success: !!res.data.success,
-        data: res.data.data ?? null,
-        error: res.data.error ?? null,
-      };
-    }
-
-    return { success: false, data: null, error: 'Respuesta no válida del servidor' };
+    const payload = res?.data;
+    return {
+      success: !!payload?.success,
+      data: payload?.data ?? null,
+      error: payload?.error ?? null,
+    };
   } catch (e) {
     const serverMsg =
       e?.response?.data?.error ||
@@ -44,4 +53,3 @@ export async function uploadProductImage(productId, file) {
 }
 
 export default api;
-

@@ -1,6 +1,4 @@
-// ----------------------------------------------
-// 🪝 useProducts — consumo del backend
-// ----------------------------------------------
+// hooks/useProducts.js
 import { useEffect, useState } from 'react';
 import api from '../../../api/backend';
 
@@ -11,9 +9,13 @@ export default function useProducts() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      // Gracias al interceptor de api, res.data ya es un ARRAY cuando el backend devuelve {success,data:[...]}
-      const res = await api.get(`/admin/products/get-products.php?t=${Date.now()}`);
-      const items = Array.isArray(res.data) ? res.data : [];
+      const res = await api.get('admin/products/get-products.php', { params: { t: Date.now() } });
+
+      // Soporta [ ... ] o { success, data:[ ... ] }
+      const payload = res?.data;
+      const items = Array.isArray(payload) ? payload
+                  : Array.isArray(payload?.data) ? payload.data
+                  : [];
       setProducts(items);
     } catch (error) {
       console.error('Error al cargar productos:', error);
@@ -25,22 +27,26 @@ export default function useProducts() {
 
   useEffect(() => { loadProducts(); }, []);
 
-  // Normalización mínima para tipos numéricos y nullables
+  // Solo los campos que realmente usa el backend ahora
   const normalizeProduct = (data) => ({
-    ...data,
-    price: data.price === '' || data.price === null ? null : Number(data.price),
-    stock: data.stock === '' || data.stock === null ? null : Number(data.stock),
+    name: data.name?.trim() ?? '',
+    price: data.price === '' || data.price == null ? 0 : Number(data.price),
     category_id:
       data.category_id === '' || data.category_id === undefined
         ? null
         : Number(data.category_id),
+    // size/stock ya no se envían: se manejan por variantes
   });
 
-  // ✅ Crear SIN recargar: devolvemos el id y que el form recargue al final
+  // Crear: devuelve id
   const addProduct = async (data) => {
     try {
-      const res = await api.post('/admin/products/create-product.php', normalizeProduct(data));
-      const id = res?.data?.data?.id ?? null; // { success, data: { id, ... } }
+      const res = await api.post(
+        'admin/products/create-product.php',   // ← sin "/" inicial
+        normalizeProduct(data),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      const id = res?.data?.data?.id ?? res?.data?.id ?? null;
       return id;
     } catch (error) {
       console.error('Error al agregar producto:', error);
@@ -48,12 +54,15 @@ export default function useProducts() {
     }
   };
 
-  // Puedes dejar este con recarga interna; el form hará una recarga final si sube imagen
   const updateProduct = async (data) => {
     try {
-      const payload = normalizeProduct(data);
+      const payload = { id: Number(data.id), ...normalizeProduct(data) };
       if (!payload.id) throw new Error('Falta id');
-      await api.post('/admin/products/update-product.php', payload);
+      await api.post(
+        'admin/products/update-product.php',   // ← sin "/" inicial
+        payload,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
       await loadProducts();
     } catch (error) {
       console.error('Error al actualizar producto:', error);
@@ -62,8 +71,7 @@ export default function useProducts() {
 
   const deleteProduct = async (id) => {
     try {
-      await api.delete(`/admin/products/delete-product.php?id=${id}`);
-      // Optimista: si fallara, el reload siguiente lo corrige
+      await api.delete(`admin/products/delete-product.php?id=${id}`); // ← sin "/" inicial
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
       console.error('Error al eliminar producto:', error);

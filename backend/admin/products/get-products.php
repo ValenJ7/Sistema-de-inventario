@@ -49,16 +49,19 @@ $sql = "
   ORDER BY p.created_at DESC, p.id DESC
 ";
 
-$stmt->execute();
-$res = $stmt->get_result();
-
-$rows = array(); // valor por defecto
-if ($res) {
-    $rows = $res->fetch_all(MYSQLI_ASSOC);
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+  // si el SQL tiene algún problema, devolveme el error real de MySQL
+  json_error('Error preparando consulta: ' . $conn->error, 500);
 }
 
-$stmt->close();
+if (!$stmt->execute()) {
+  json_error('Error ejecutando consulta: ' . $stmt->error, 500);
+}
 
+$res = $stmt->get_result();
+$rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : array();
+$stmt->close();
 
 /**
  * Enriquecemos cada fila con:
@@ -95,13 +98,7 @@ foreach ($rows as $r) {
     ? ((int)$r['v_stock_min'] <= 2)
     : ($stock_total <= 2);
 
-  if ($lowByTotal || $lowByAny) {
-    $stock_state = 'low';
-  } elseif ($stock_total <= 15) {
-    $stock_state = 'medium';
-  } else {
-    $stock_state = 'ok';
-  }
+ $stock_state = ($stock_total > 0) ? 'in' : 'out';
 
   // armamos salida preservando tus campos originales
   $out[] = [

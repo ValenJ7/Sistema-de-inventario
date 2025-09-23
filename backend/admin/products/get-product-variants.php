@@ -1,24 +1,23 @@
 <?php
-// backend/admin/products/get-product-variants.php
-declare(strict_types=1);
-header('Content-Type: application/json');
-
-require_once __DIR__ . '/../../db.php'; // <-- ajustá a tu include real
-
-if (!function_exists('json_ok')) {
-  function json_ok($data) { echo json_encode(['success'=>true,'data'=>$data]); exit; }
-  function json_error($msg,$code=400){ http_response_code($code); echo json_encode(['success'=>false,'error'=>$msg]); exit; }
-}
+require __DIR__ . '/../../http/cors.php';
+require __DIR__ . '/../../http/json.php';
+require __DIR__ . '/../../db.php';
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') json_error('Método no permitido', 405);
 
 $productId = isset($_GET['product_id']) ? (int)$_GET['product_id'] : 0;
-if ($productId <= 0) json_error('product_id requerido');
+if ($productId <= 0) json_error('product_id requerido', 400);
 
 $sql = "SELECT id, label, sku, stock, sort_order
         FROM product_variants
-        WHERE product_id = :pid
+        WHERE product_id = ?
         ORDER BY sort_order ASC, id ASC";
-$stmt = $pdo->prepare($sql);
-$stmt->execute([':pid'=>$productId]);
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $conn->prepare($sql);
+if (!$stmt) json_error('Error preparando consulta: '.$conn->error, 500);
+$stmt->bind_param('i', $productId);
+$stmt->execute();
+$res = $stmt->get_result();
+$rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+$stmt->close();
 
 json_ok($rows);

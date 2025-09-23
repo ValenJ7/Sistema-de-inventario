@@ -8,23 +8,14 @@ function buildImageSrc(p, reloadToken) {
 }
 
 function StockBadge({ state }) {
-  const colors = {
-    low: "bg-red-100 text-red-600",
-    medium: "bg-yellow-100 text-yellow-600",
-    ok: "bg-green-100 text-green-600",
-  };
-  const labels = {
-    low: "Stock Bajo",
-    medium: "Stock Medio",
-    ok: "Stock Ok",
-  };
+  const isIn = state === "in";
   return (
     <span
       className={`px-3 py-1 text-sm rounded-full font-medium ${
-        colors[state] || "bg-gray-100 text-gray-600"
+        isIn ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
       }`}
     >
-      {labels[state] || "—"}
+      {isIn ? "Con stock" : "Sin stock"}
     </span>
   );
 }
@@ -95,7 +86,7 @@ export default function ProductList({ products, onEdit, onDelete, reloadToken })
 
                 {/* Estado */}
                 <td className="px-4 py-3 text-center">
-                  <StockBadge state={p.stock_state} />
+                  <StockBadge state={p.stock_total > 0 ? "in" : "out"} />
                 </td>
 
                 {/* Acciones */}

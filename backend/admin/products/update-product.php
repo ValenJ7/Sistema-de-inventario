@@ -8,32 +8,30 @@ require __DIR__ . '/../../lib/slug_unique_mysqli.php';
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_error('Método no permitido', 405);
 
+// JSON o form
 $body = json_decode(file_get_contents('php://input'), true);
-if (!is_array($body)) json_error('JSON inválido', 400);
+if (!is_array($body) || empty($body)) $body = $_POST;
 
 $id          = (int)($body['id'] ?? 0);
 $name        = trim((string)($body['name'] ?? ''));
-$size        = trim((string)($body['size'] ?? ''));
-$price       = $body['price'] ?? null;
-$stock       = $body['stock'] ?? null;
+$priceRaw    = $body['price'] ?? null;
 $categoryRaw = $body['category_id'] ?? null;
 
-if ($id <= 0 || $name === '' || !is_numeric($price) || !is_numeric($stock)) {
-  json_error('Datos inválidos', 400);
-}
+if ($id <= 0)             json_error('ID inválido', 400);
+if ($name === '')         json_error('El nombre es requerido', 400);
+if (!is_numeric($priceRaw)) json_error('El precio es inválido', 400);
 
-$price = (float)$price;
-$stock = (int)$stock;
+$price = (float)$priceRaw;
 if ($price < 0) json_error('price debe ser ≥ 0', 422);
-if ($stock < 0) json_error('stock debe ser ≥ 0', 422);
 
+// category_id nullable
 $hasCategory = ($categoryRaw !== '' && $categoryRaw !== null);
 if ($hasCategory && !is_numeric($categoryRaw)) json_error('category_id inválido', 400);
 $categoryId = $hasCategory ? (int)$categoryRaw : null;
 
-// ¿ya tiene slug?
+// Traer slug actual
 $cur = $conn->prepare("SELECT slug FROM products WHERE id = ?");
-if (!$cur) json_error('Error preparando consulta slug', 500);
+if (!$cur) json_error('Error preparando consulta slug: '.$conn->error, 500);
 $cur->bind_param('i', $id);
 $cur->execute();
 $cur->bind_result($currentSlug);
@@ -42,58 +40,40 @@ $cur->close();
 
 $needsSlug = (!$currentSlug || $currentSlug === '');
 
+/**
+ * Armamos UPDATE sin size/stock (las variantes se gestionan aparte)
+ */
 if ($categoryId === null) {
   if ($needsSlug) {
     $slug = uniqueProductSlugMysqli($conn, $name, $id);
-    $sql = "
-      UPDATE products
-      SET name = ?, slug = ?, size = ?, price = ?, stock = ?, category_id = NULL
-      WHERE id = ?
-    ";
+    $sql  = "UPDATE products SET name = ?, slug = ?, price = ?, category_id = NULL WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) json_error('Error preparando update', 500);
-    // name(s), slug(s), size(s), price(d), stock(i), id(i)
-    $stmt->bind_param('sssdii', $name, $slug, $size, $price, $stock, $id);
+    if (!$stmt) json_error('Error preparando update: '.$conn->error, 500);
+    $stmt->bind_param('ssdi', $name, $slug, $price, $id);
   } else {
-    $sql = "
-      UPDATE products
-      SET name = ?, size = ?, price = ?, stock = ?, category_id = NULL
-      WHERE id = ?
-    ";
+    $sql  = "UPDATE products SET name = ?, price = ?, category_id = NULL WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) json_error('Error preparando update', 500);
-    // name(s), size(s), price(d), stock(i), id(i)
-    $stmt->bind_param('ssdii', $name, $size, $price, $stock, $id);
+    if (!$stmt) json_error('Error preparando update: '.$conn->error, 500);
+    $stmt->bind_param('sdi', $name, $price, $id);
   }
 } else {
   if ($needsSlug) {
     $slug = uniqueProductSlugMysqli($conn, $name, $id);
-    $sql = "
-      UPDATE products
-      SET name = ?, slug = ?, size = ?, price = ?, stock = ?, category_id = ?
-      WHERE id = ?
-    ";
+    $sql  = "UPDATE products SET name = ?, slug = ?, price = ?, category_id = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) json_error('Error preparando update', 500);
-    // name(s), slug(s), size(s), price(d), stock(i), category_id(i), id(i)
-    $stmt->bind_param('sssdi ii', $name, $slug, $size, $price, $stock, $categoryId, $id);
-    // Nota: algunos editores rompen el espacio en la cadena de tipos.
-    // Debe ser exactamente: 'sssdiii'
+    if (!$stmt) json_error('Error preparando update: '.$conn->error, 500);
+    // name(s) slug(s) price(d) category_id(i) id(i)
+    $stmt->bind_param('ssdii', $name, $slug, $price, $categoryId, $id);
   } else {
-    $sql = "
-      UPDATE products
-      SET name = ?, size = ?, price = ?, stock = ?, category_id = ?
-      WHERE id = ?
-    ";
+    $sql  = "UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) json_error('Error preparando update', 500);
-    // name(s), size(s), price(d), stock(i), category_id(i), id(i)
-    $stmt->bind_param('ssdiii', $name, $size, $price, $stock, $categoryId, $id);
+    if (!$stmt) json_error('Error preparando update: '.$conn->error, 500);
+    $stmt->bind_param('sdii', $name, $price, $categoryId, $id);
   }
 }
 
 $ok = $stmt->execute();
 $stmt->close();
 
-if (!$ok) json_error('Error al actualizar', 500);
+if (!$ok) json_error('Error al actualizar: '.$conn->error, 500);
 json_ok(true);
