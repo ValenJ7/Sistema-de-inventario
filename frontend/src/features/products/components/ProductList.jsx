@@ -1,79 +1,114 @@
-// ----------------------------------------------
-// 🧾 ProductList.jsx — imagen robusta (image_path | main_image) + anti-cache
-// ----------------------------------------------
-const BACKEND_BASE = 'http://localhost/SistemaDeInventario/backend';
+const BACKEND_BASE = "http://localhost/SistemaDeInventario/backend";
 
 function buildImageSrc(p, reloadToken) {
   const path = p?.image_path ?? p?.main_image ?? null;
   if (!path) return null;
-
-  // Si ya es URL absoluta, úsala tal cual; si es relativa, prefix con BACKEND_BASE
   const url = /^https?:\/\//i.test(path) ? path : `${BACKEND_BASE}${path}`;
-  return `${url}?t=${reloadToken || ''}`;
+  return `${url}?t=${reloadToken || ""}`;
 }
 
-export default function ProductList({
-  products,
-  setSelectedProduct,
-  onDeleteProduct,
-  reloadToken, // viene del padre para romper caché
-}) {
+function StockBadge({ state }) {
+  const colors = {
+    low: "bg-red-100 text-red-600",
+    medium: "bg-yellow-100 text-yellow-600",
+    ok: "bg-green-100 text-green-600",
+  };
+  const labels = {
+    low: "Stock Bajo",
+    medium: "Stock Medio",
+    ok: "Stock Ok",
+  };
   return (
-    <div className="overflow-x-auto mt-6">
-      <table className="min-w-full border border-gray-300">
-        <thead className="bg-gray-100">
+    <span
+      className={`px-3 py-1 text-sm rounded-full font-medium ${
+        colors[state] || "bg-gray-100 text-gray-600"
+      }`}
+    >
+      {labels[state] || "—"}
+    </span>
+  );
+}
+
+export default function ProductList({ products, onEdit, onDelete, reloadToken }) {
+  return (
+    <div className="overflow-x-auto bg-white rounded-lg shadow">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-2 border">Img</th>
-            <th className="px-4 py-2 border">ID</th>
-            <th className="px-4 py-2 border">Nombre</th>
-            <th className="px-4 py-2 border">Slug</th>
-            <th className="px-4 py-2 border">Talle</th>
-            <th className="px-4 py-2 border">Precio</th>
-            <th className="px-4 py-2 border">Stock</th>
-            <th className="px-4 py-2 border">Categoría</th>
-            <th className="px-4 py-2 border">Acciones</th>
+            <th className="px-4 py-2 text-left">Producto</th>
+            <th className="px-4 py-2 text-left">Categoría</th>
+            <th className="px-4 py-2 text-left">Precio</th>
+            <th className="px-4 py-2 text-left">Talles Disponibles</th>
+            <th className="px-4 py-2 text-center">Stock Total</th>
+            <th className="px-4 py-2 text-center">Estado</th>
+            <th className="px-4 py-2 text-center">Acciones</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-100">
           {products.map((p) => {
             const src = buildImageSrc(p, reloadToken);
             return (
-              <tr key={p.id} className="text-center">
-                <td className="px-4 py-2 border">
+              <tr key={p.id} className="hover:bg-gray-50">
+                {/* Producto */}
+                <td className="px-4 py-3 flex items-center gap-3">
                   {src ? (
                     <img
                       src={src}
                       alt={p.name}
-                      className="h-12 w-12 object-cover rounded mx-auto"
-                      onError={(e) => {
-                        // Si falla la carga, mostrar placeholder discreto
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement.innerHTML = '<span class="text-gray-400">—</span>';
-                      }}
+                      className="h-12 w-12 object-cover rounded"
                     />
+                  ) : (
+                    <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+                      —
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium">{p.name}</div>
+                    <div className="text-sm text-gray-500">{p.slug}</div>
+                  </div>
+                </td>
+
+                {/* Categoría */}
+                <td className="px-4 py-3">{p.category_name || "-"}</td>
+
+                {/* Precio */}
+                <td className="px-4 py-3">${p.price}</td>
+
+                {/* Talles disponibles */}
+                <td className="px-4 py-3 space-x-2">
+                  {Array.isArray(p.variants_summary) && p.variants_summary.length > 0 ? (
+                    p.variants_summary.map((v, i) => (
+                      <span
+                        key={i}
+                        className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+                      >
+                        {v.label}: {v.stock}
+                      </span>
+                    ))
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2 border">{p.id}</td>
-                <td className="px-4 py-2 border">{p.name}</td>
-                <td className="px-4 py-2 border">
-                  <code className="px-2 py-1 bg-gray-100 rounded">{p.slug}</code>
+
+                {/* Stock total */}
+                <td className="px-4 py-3 text-center">{p.stock_total ?? 0}</td>
+
+                {/* Estado */}
+                <td className="px-4 py-3 text-center">
+                  <StockBadge state={p.stock_state} />
                 </td>
-                <td className="px-4 py-2 border">{p.size}</td>
-                <td className="px-4 py-2 border">${p.price}</td>
-                <td className="px-4 py-2 border">{p.stock}</td>
-                <td className="px-4 py-2 border">{p.category_name || '-'}</td>
-                <td className="px-4 py-2 border space-x-2">
+
+                {/* Acciones */}
+                <td className="px-4 py-3 text-center space-x-2">
                   <button
-                    onClick={() => setSelectedProduct(p)}
-                    className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                    onClick={() => onEdit(p)}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     Editar
                   </button>
                   <button
-                    onClick={() => onDeleteProduct(p.id)}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    onClick={() => onDelete(p.id)}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                   >
                     Eliminar
                   </button>
