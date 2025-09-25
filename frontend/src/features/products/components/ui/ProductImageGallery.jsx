@@ -1,150 +1,162 @@
-import React, { useState, useEffect } from "react";
-import { DndContext, closestCenter } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { Trash2, Star, GripVertical } from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
+// components/ui/ProductImageGallery.jsx
+import { useMemo } from "react";
 
-function SortableImage({ img, onDelete, onSetMain }) {
-  // IMPORTANT: usamos useSortable, pero NO ponemos listeners en el contenedor,
-  // sino en un "drag handle" para que los botones sean clickeables.
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: img.id });
+/**
+ * Lista ordenable con flechas ↑/↓, botón eliminar y estrella para marcar principal.
+ * Se asume que la lista viene normalizada (solo la primera es principal).
+ *
+ * props:
+ * - images: [{id, url, sort_order, is_main}]
+ * - onDeleteImage: (id) => void|Promise
+ * - onSetMain: (id) => void|Promise
+ * - onReorder: (newOrderIds) => void|Promise
+ */
+export default function ProductImageGallery({
+  images = [],
+  onDeleteImage,
+  onSetMain,
+  onReorder,
+}) {
+  const ordered = useMemo(
+    () => (images || []).slice().sort((a, b) => a.sort_order - b.sort_order),
+    [images]
+  );
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+  const moveUp = (index) => {
+    if (index <= 0) return;
+    const ids = ordered.map((x) => x.id);
+    [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
+    onReorder?.(ids);
+  };
+
+  const moveDown = (index) => {
+    if (index >= ordered.length - 1) return;
+    const ids = ordered.map((x) => x.id);
+    [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]];
+    onReorder?.(ids);
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative rounded overflow-hidden border group ${
-        img.sort_order === 0 ? "border-blue-500" : "border-gray-200"
-      }`}
-    >
-      {/* Imagen */}
-      <img
-        src={`http://localhost/SistemaDeInventario/backend${img.url}`}
-        alt="producto"
-        className="w-full h-24 object-cover select-none"
-        draggable={false}
-      />
-
-      {/* Badge principal */}
-      {img.sort_order === 0 && (
-        <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded shadow">
-          Principal
-        </span>
-      )}
-
-      {/* Overlay: no bloquea eventos; los botones sí los reciben */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition flex items-start justify-between p-2 pointer-events-none">
-        {/* ⭐ Solo si NO es principal */}
-        {img.sort_order !== 0 && (
-          <button
-            onClick={() => onSetMain(img.id)}
-            className="pointer-events-auto h-8 w-8 flex items-center justify-center rounded-full bg-white/90 text-gray-700 hover:bg-yellow-500 hover:text-white shadow-md transform scale-95 hover:scale-100 transition"
-            title="Marcar como principal"
-            type="button"
-          >
-            <Star className="h-4 w-4" />
-          </button>
-        )}
-
-        {/* Botón eliminar */}
-        <button
-          onClick={onDelete}
-          className="pointer-events-auto h-8 w-8 flex items-center justify-center rounded-full bg-white/90 text-gray-700 hover:bg-red-600 hover:text-white shadow-md transform scale-95 hover:scale-100 transition ml-auto"
-          title="Eliminar imagen"
-          type="button"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+    <div className="space-y-3">
+      <div className="text-sm font-medium">
+        Imágenes ordenadas (la primera será la principal):
       </div>
 
-      {/* Drag handle (abajo a la derecha) */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute bottom-1 right-1 h-7 w-7 rounded-md bg-white/90 shadow flex items-center justify-center cursor-move pointer-events-auto"
-        title="Arrastrar para reordenar"
-        type="button"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {ordered.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+          No hay imágenes cargadas aún.
+        </div>
+      ) : (
+        ordered.map((img, idx) => (
+          <div
+            key={img.id}
+            className="flex items-center gap-4 rounded-xl border p-3"
+          >
+            <div className="w-8 h-8 grid place-items-center rounded-lg bg-gray-100 text-sm font-semibold">
+              {idx + 1}
+            </div>
+
+            <div className="w-24 h-24 overflow-hidden rounded-lg bg-gray-50 border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={img.url}
+                alt={`Imagen ${idx + 1}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">
+                Imagen {idx + 1}{idx === 0 ? " (Principal)" : ""}
+              </div>
+              <div className="text-xs text-gray-500">ID #{img.id}</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Marcar como principal: solo visualmente “activada” en el primer ítem */}
+              <button
+                type="button"
+                onClick={() => onSetMain?.(img.id)}
+                title="Marcar como principal"
+                className={`h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 ${
+                  idx === 0 ? "text-yellow-600 border-yellow-300" : ""
+                }`}
+              >
+                <StarIcon className="w-4 h-4" filled={idx === 0} />
+              </button>
+
+              {/* Mover arriba/abajo */}
+              <button
+                type="button"
+                onClick={() => moveUp(idx)}
+                disabled={idx === 0}
+                title="Subir"
+                className="h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 disabled:opacity-40"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveDown(idx)}
+                disabled={idx === ordered.length - 1}
+                title="Bajar"
+                className="h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 disabled:opacity-40"
+              >
+                <ArrowDown className="w-4 h-4" />
+              </button>
+
+              {/* Eliminar */}
+              <button
+                type="button"
+                onClick={() => onDeleteImage?.(img.id)}
+                title="Eliminar"
+                className="h-9 w-9 grid place-items-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
 
-export default function ProductImageGallery({ images, onDeleteImage, onSetMain, onReorder }) {
-  const [items, setItems] = useState(images);
-  const [confirmId, setConfirmId] = useState(null);
+/* Iconos inline */
 
-  useEffect(() => {
-    setItems(images);
-  }, [images]);
-
-  const handleConfirmDelete = () => {
-    if (confirmId) {
-      onDeleteImage(confirmId);
-      setConfirmId(null);
-    }
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = items.findIndex((i) => i.id === active.id);
-    const newIndex = items.findIndex((i) => i.id === over.id);
-    const newItems = arrayMove(items, oldIndex, newIndex);
-
-    const orders = newItems.map((img, idx) => ({
-      id: img.id,
-      sort_order: idx, // 0 será la primera (principal si luego no la cambiás)
-    }));
-
-    setItems(newItems);
-    onReorder(orders);
-  };
-
-  if (!items?.length) {
-    return <p className="text-sm text-gray-500">Este producto no tiene imágenes cargadas.</p>;
-  }
-
+function ArrowUp(props) {
   return (
-    <div className="mt-4">
-      <h3 className="font-semibold mb-2">Galería de imágenes (arrastrá para reordenar)</h3>
-
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="grid grid-cols-3 gap-3">
-            {items.map((img) => (
-              <SortableImage
-                key={img.id}
-                img={img}
-                onDelete={() => setConfirmId(img.id)} // abre modal
-                onSetMain={onSetMain}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {/* Modal de confirmación */}
-      <ConfirmDialog
-        open={!!confirmId}
-        title="Eliminar imagen"
-        message="¿Seguro que querés eliminar esta imagen? Esta acción no se puede deshacer."
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmId(null)}
-      />
-    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+    </svg>
+  );
+}
+function ArrowDown(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+function TrashIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m1 0l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0v14m4-14v14m4-14v14" />
+    </svg>
+  );
+}
+function StarIcon({ filled, ...props }) {
+  if (filled) {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 2l2.83 6.63L22 9.24l-5 4.36L18.18 21 12 17.27 5.82 21 7 13.6l-5-4.36 7.17-.61L12 2z" />
+    </svg>
   );
 }

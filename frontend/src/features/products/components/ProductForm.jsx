@@ -1,9 +1,10 @@
 // components/ProductForm.jsx
 import { useEffect, useState } from "react";
 import api, { uploadProductImage } from "../../../api/backend";
-import ImagePickerPro from "./ui/ImagePickerPro";
+// import ImagePickerPro from "./ui/ImagePickerPro"; // ❌ eliminado
 import useProductImages from "../hooks/useProductImages";
 import ProductImageGallery from "./ui/ProductImageGallery";
+import LocalProductImages from "./ui/LocalProductImages";
 
 const BACKEND_BASE = "http://localhost/SistemaDeInventario/backend";
 
@@ -13,7 +14,7 @@ export default function ProductForm({
   onAddProduct,
   onUpdateProduct,
   reload,
-  onFinished, // 👈 callback para cerrar modal
+  onFinished,
 }) {
   const [form, setForm] = useState({
     id: null,
@@ -25,17 +26,19 @@ export default function ProductForm({
   const [categories, setCategories] = useState([]);
   const [variants, setVariants] = useState([{ label: "", stock: 0 }]);
 
-  // Imagen
+  // estado de imagen sólo se usaba para ImagePickerPro; lo dejamos por si lo reusás
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
 
-  // Hook de imágenes (galería cuando ya existe el producto)
+  // Imágenes locales cuando aún no hay product_id (modo Agregar)
+  const [localImages, setLocalImages] = useState([]);
+
+  // Galería conectada al backend (modo Editar)
   const { images, deleteImage, setMainImage, reorderImages } = useProductImages(
     form.id
   );
 
-  // Cargar categorías
   useEffect(() => {
     api
       .get("admin/categories/get-categories.php")
@@ -43,7 +46,6 @@ export default function ProductForm({
       .catch((err) => console.error("Error cargando categorías:", err));
   }, []);
 
-  // Al seleccionar producto para editar
   useEffect(() => {
     if (selectedProduct) {
       setForm({
@@ -60,7 +62,6 @@ export default function ProductForm({
         selectedProduct.image_path ?? selectedProduct.main_image ?? null;
       setCurrentImage(path ? `${BACKEND_BASE}${path}` : null);
 
-      // traer variantes del backend
       api
         .get(
           `admin/products/get-product-variants.php?product_id=${selectedProduct.id}`
@@ -74,7 +75,6 @@ export default function ProductForm({
               }))
             );
           } else {
-            // fallback legacy
             setVariants([
               {
                 label: selectedProduct.size || "Único",
@@ -91,6 +91,7 @@ export default function ProductForm({
       if (preview) URL.revokeObjectURL(preview);
       setPreview(null);
       setFile(null);
+      setLocalImages([]);
     } else {
       // modo agregar
       setForm({ id: null, name: "", category_id: "", price: "" });
@@ -99,11 +100,11 @@ export default function ProductForm({
       setPreview(null);
       setFile(null);
       setCurrentImage(null);
+      setLocalImages([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct]);
 
-  // liberar memoria si cambia preview o al desmontar
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview);
@@ -112,19 +113,6 @@ export default function ProductForm({
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  // recibe File|null del ImagePicker
-  const handlePick = (file) => {
-    if (preview) URL.revokeObjectURL(preview);
-    if (!file) {
-      setFile(null);
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setFile(file);
-    setPreview(url);
-  };
 
   // variantes
   const handleVariantChange = (index, field, value) => {
@@ -160,29 +148,54 @@ export default function ProductForm({
               stock: Number(v.stock) || 0,
               sort_order: i,
             }))
-            .filter((v) => v.label.length > 0), // evitar variantes vacías
+            .filter((v) => v.label.length > 0),
         };
         await api.post("admin/products/set-product-variants.php", payload);
       }
 
-      // subir imagen (opcional)
-      if (file && productId) {
+      // imágenes
+      if (!selectedProduct) {
+        // Subir imágenes locales en el orden elegido
+        const ordered = (localImages || [])
+          .slice()
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+        const uploadedIds = [];
+        for (const it of ordered) {
+          if (!it.file) continue;
+          const resp = await uploadProductImage(productId, it.file);
+          if (resp?.id) uploadedIds.push(resp.id);
+        }
+
+        if (uploadedIds.length > 1) {
+          try {
+            await api.post("admin/products/reorder-product-images.php", {
+              product_id: productId,
+              order: uploadedIds,
+            });
+          } catch (e) {
+            console.warn("Endpoint de reorden no disponible:", e);
+          }
+        }
+      } else if (file && productId) {
+        // si en algún momento volvés a usar un picker puntual
         const r = await uploadProductImage(productId, file);
-        if (!r?.success) console.error("Error subiendo imagen:", r?.error);
+        if (!r?.success && !r?.id) {
+          console.error("Error subiendo imagen en edición:", r?.error);
+        }
       }
 
-      // recargar listado y cerrar modal
       if (typeof reload === "function") await reload(Date.now());
       if (typeof onFinished === "function") onFinished();
 
-      // Limpieza (por si el modal no se cerrara por algún motivo)
+      // limpieza
       if (preview) URL.revokeObjectURL(preview);
       setFile(null);
       setPreview(null);
       setCurrentImage(null);
       setVariants([{ label: "", stock: 0 }]);
       setForm({ id: null, name: "", category_id: "", price: "" });
-      // ⚠️ No hacemos setSelectedProduct(null) acá porque el modal ya se cierra arriba
+      setLocalImages([]);
     } catch (err) {
       console.error("Error en submit:", err);
     }
@@ -214,7 +227,7 @@ export default function ProductForm({
             required
           />
 
-          <select
+        <select
             name="category_id"
             className="border p-2 rounded flex-1"
             value={form.category_id}
@@ -273,26 +286,14 @@ export default function ProductForm({
             </div>
           ))}
         </div>
-
-        <div className="mt-3 text-xs text-gray-500 space-y-1">
-          <p className="font-medium">Ejemplos de talles:</p>
-          <ul className="list-disc list-inside">
-            <li>Ropa: XS, S, M, L, XL, XXL</li>
-            <li>Numéricos: 1, 2, 3, 4, 5, 6</li>
-            <li>Talle único: Único / One Size</li>
-            <li>Calzado: 35, 36, 37, 38, 39, 40</li>
-          </ul>
-        </div>
       </div>
 
-      {/* Imagen principal */}
-      <ImagePickerPro
-        label="Imagen principal"
-        value={preview || currentImage || null}
-        onChangeFile={handlePick}
-      />
-
-      {form.id && (
+      {/* Imágenes */}
+      {!form.id ? (
+        // Modo Agregar: galería local con flechas/eliminar
+        <LocalProductImages value={[]} onChange={setLocalImages} />
+      ) : (
+        // Modo Editar: SOLO galería (sin dropzone/picker)
         <ProductImageGallery
           images={images}
           onDeleteImage={deleteImage}
