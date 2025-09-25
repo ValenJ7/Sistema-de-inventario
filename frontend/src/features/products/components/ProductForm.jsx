@@ -1,7 +1,5 @@
-// components/ProductForm.jsx
 import { useEffect, useState } from "react";
 import api, { uploadProductImage } from "../../../api/backend";
-// import ImagePickerPro from "./ui/ImagePickerPro"; // ❌ eliminado
 import useProductImages from "../hooks/useProductImages";
 import ProductImageGallery from "./ui/ProductImageGallery";
 import LocalProductImages from "./ui/LocalProductImages";
@@ -26,15 +24,17 @@ export default function ProductForm({
   const [categories, setCategories] = useState([]);
   const [variants, setVariants] = useState([{ label: "", stock: 0 }]);
 
-  // estado de imagen sólo se usaba para ImagePickerPro; lo dejamos por si lo reusás
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
 
-  // Imágenes locales cuando aún no hay product_id (modo Agregar)
+  // Imágenes locales (modo agregar)
   const [localImages, setLocalImages] = useState([]);
 
-  // Galería conectada al backend (modo Editar)
+  // Imágenes nuevas en edición (pendientes de subir)
+  const [pendingImages, setPendingImages] = useState([]);
+
+  // Imágenes desde backend (modo editar)
   const { images, deleteImage, setMainImage, reorderImages } = useProductImages(
     form.id
   );
@@ -92,6 +92,7 @@ export default function ProductForm({
       setPreview(null);
       setFile(null);
       setLocalImages([]);
+      setPendingImages([]);
     } else {
       // modo agregar
       setForm({ id: null, name: "", category_id: "", price: "" });
@@ -101,6 +102,7 @@ export default function ProductForm({
       setFile(null);
       setCurrentImage(null);
       setLocalImages([]);
+      setPendingImages([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct]);
@@ -114,7 +116,6 @@ export default function ProductForm({
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  // variantes
   const handleVariantChange = (index, field, value) => {
     setVariants((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
@@ -130,15 +131,13 @@ export default function ProductForm({
     let productId = selectedProduct?.id ?? null;
 
     try {
-      // crear / actualizar producto
       if (selectedProduct) {
         await onUpdateProduct({ ...form, id: productId ?? form.id });
         productId = productId ?? form.id;
       } else {
-        productId = await onAddProduct(form); // debe devolver id
+        productId = await onAddProduct(form);
       }
 
-      // guardar variantes
       if (productId) {
         const payload = {
           product_id: productId,
@@ -153,9 +152,8 @@ export default function ProductForm({
         await api.post("admin/products/set-product-variants.php", payload);
       }
 
-      // imágenes
       if (!selectedProduct) {
-        // Subir imágenes locales en el orden elegido
+        // modo agregar: subir imágenes locales
         const ordered = (localImages || [])
           .slice()
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -168,7 +166,7 @@ export default function ProductForm({
         }
 
         if (uploadedIds.length > 1) {
-          try {s
+          try {
             const fd = new FormData();
             fd.append("product_id", String(productId));
             uploadedIds.forEach((id) => fd.append("order[]", String(id)));
@@ -180,18 +178,26 @@ export default function ProductForm({
             console.warn("Endpoint de reorden no disponible:", e);
           }
         }
-      } else if (file && productId) {
-        // si en algún momento volvés a usar un picker puntual
-        const r = await uploadProductImage(productId, file);
-        if (!r?.success && !r?.id) {
-          console.error("Error subiendo imagen en edición:", r?.error);
+      } else {
+        // modo edición: subir imágenes nuevas pendientes
+        if (pendingImages.length > 0) {
+          const ordered = pendingImages
+            .slice()
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+          for (const it of ordered) {
+            if (!it.file) continue;
+            const resp = await uploadProductImage(productId, it.file);
+            if (!resp?.success) {
+              console.error("Error subiendo imagen en edición:", resp?.error);
+            }
+          }
         }
       }
 
       if (typeof reload === "function") await reload(Date.now());
       if (typeof onFinished === "function") onFinished();
 
-      // limpieza
       if (preview) URL.revokeObjectURL(preview);
       setFile(null);
       setPreview(null);
@@ -199,6 +205,7 @@ export default function ProductForm({
       setVariants([{ label: "", stock: 0 }]);
       setForm({ id: null, name: "", category_id: "", price: "" });
       setLocalImages([]);
+      setPendingImages([]);
     } catch (err) {
       console.error("Error en submit:", err);
     }
@@ -230,7 +237,7 @@ export default function ProductForm({
             required
           />
 
-        <select
+          <select
             name="category_id"
             className="border p-2 rounded flex-1"
             value={form.category_id}
@@ -293,16 +300,22 @@ export default function ProductForm({
 
       {/* Imágenes */}
       {!form.id ? (
-        // Modo Agregar: galería local con flechas/eliminar
         <LocalProductImages value={[]} onChange={setLocalImages} />
       ) : (
-        // Modo Editar: SOLO galería (sin dropzone/picker)
-        <ProductImageGallery
-          images={images}
-          onDeleteImage={deleteImage}
-          onSetMain={setMainImage}
-          onReorder={reorderImages}
-        />
+        <div className="space-y-4">
+          {/* Subir nuevas imágenes con preview */}
+          <LocalProductImages value={[]} onChange={setPendingImages} />
+
+          {/* Galería existente con scroll */}
+          <div className="max-h-80 overflow-y-auto pr-2">
+            <ProductImageGallery
+              images={images}
+              onDeleteImage={deleteImage}
+              onSetMain={setMainImage}
+              onReorder={reorderImages}
+            />
+          </div>
+        </div>
       )}
 
       <div className="flex justify-end gap-3 mt-4">

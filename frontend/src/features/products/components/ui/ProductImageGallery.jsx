@@ -1,4 +1,3 @@
-// components/ui/ProductImageGallery.jsx
 import { useMemo } from "react";
 
 /**
@@ -36,26 +35,26 @@ export default function ProductImageGallery({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="text-sm font-medium">
         Imágenes ordenadas (elige la estrella para marcar principal):
       </div>
 
       {ordered.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+        <div className="rounded-lg border border-dashed p-4 text-center text-sm text-gray-500">
           No hay imágenes cargadas aún.
         </div>
       ) : (
         ordered.map((img, idx) => (
           <div
             key={img.id}
-            className="flex items-center gap-4 rounded-xl border p-3"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 p-2"
           >
-            <div className="w-8 h-8 grid place-items-center rounded-lg bg-gray-100 text-sm font-semibold">
+            <div className="w-6 h-6 grid place-items-center rounded-md bg-gray-100 text-xs font-semibold">
               {idx + 1}
             </div>
 
-            <div className="w-24 h-24 overflow-hidden rounded-lg bg-gray-50 border">
+            <div className="w-16 h-16 overflow-hidden rounded-md bg-gray-50 border">
               <img
                 src={img.url}
                 alt={`Imagen ${idx + 1}`}
@@ -65,23 +64,23 @@ export default function ProductImageGallery({
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">
+              <div className="text-xs font-medium truncate">
                 Imagen {idx + 1}{img.is_main ? " (Principal)" : ""}
               </div>
-              <div className="text-xs text-gray-500">ID #{img.id}</div>
+              <div className="text-[11px] text-gray-500">ID #{img.id}</div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Estrella basada en is_main */}
+            <div className="flex items-center gap-1">
+              {/* Estrella */}
               <button
                 type="button"
                 onClick={() => onSetMain?.(img.id)}
                 title="Marcar como principal"
-                className={`h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 ${
+                className={`h-7 w-7 grid place-items-center rounded-md border hover:bg-gray-50 ${
                   img.is_main ? "text-yellow-600 border-yellow-300" : ""
                 }`}
               >
-                <StarIcon className="w-4 h-4" filled={img.is_main} />
+                <StarIcon className="w-3.5 h-3.5" filled={img.is_main} />
               </button>
 
               {/* Mover arriba/abajo */}
@@ -90,18 +89,18 @@ export default function ProductImageGallery({
                 onClick={() => moveUp(idx)}
                 disabled={idx === 0}
                 title="Subir"
-                className="h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 disabled:opacity-40"
+                className="h-7 w-7 grid place-items-center rounded-md border hover:bg-gray-50 disabled:opacity-40"
               >
-                <ArrowUp className="w-4 h-4" />
+                <ArrowUp className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => moveDown(idx)}
                 disabled={idx === ordered.length - 1}
                 title="Bajar"
-                className="h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 disabled:opacity-40"
+                className="h-7 w-7 grid place-items-center rounded-md border hover:bg-gray-50 disabled:opacity-40"
               >
-                <ArrowDown className="w-4 h-4" />
+                <ArrowDown className="w-3.5 h-3.5" />
               </button>
 
               {/* Eliminar */}
@@ -109,9 +108,9 @@ export default function ProductImageGallery({
                 type="button"
                 onClick={() => onDeleteImage?.(img.id)}
                 title="Eliminar"
-                className="h-9 w-9 grid place-items-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                className="h-7 w-7 grid place-items-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
               >
-                <TrashIcon className="w-4 h-4" />
+                <TrashIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -122,7 +121,6 @@ export default function ProductImageGallery({
 }
 
 /* Iconos inline */
-
 function ArrowUp(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
