@@ -107,7 +107,7 @@ export default function useProductImages(productId) {
     async (imageId) => {
       if (!productId || !imageId) return;
       try {
-        await api.post("admin/products/set-main-image.php", {
+        await api.post("admin/products/set-main-product-image.php", {
           product_id: productId,
           image_id: imageId,
         });
