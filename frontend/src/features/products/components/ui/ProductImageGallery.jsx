@@ -3,7 +3,6 @@ import { useMemo } from "react";
 
 /**
  * Lista ordenable con flechas ↑/↓, botón eliminar y estrella para marcar principal.
- * Se asume que la lista viene normalizada (solo la primera es principal).
  *
  * props:
  * - images: [{id, url, sort_order, is_main}]
@@ -39,7 +38,7 @@ export default function ProductImageGallery({
   return (
     <div className="space-y-3">
       <div className="text-sm font-medium">
-        Imágenes ordenadas (la primera será la principal):
+        Imágenes ordenadas (elige la estrella para marcar principal):
       </div>
 
       {ordered.length === 0 ? (
@@ -57,7 +56,6 @@ export default function ProductImageGallery({
             </div>
 
             <div className="w-24 h-24 overflow-hidden rounded-lg bg-gray-50 border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={img.url}
                 alt={`Imagen ${idx + 1}`}
@@ -68,22 +66,22 @@ export default function ProductImageGallery({
 
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">
-                Imagen {idx + 1}{idx === 0 ? " (Principal)" : ""}
+                Imagen {idx + 1}{img.is_main ? " (Principal)" : ""}
               </div>
               <div className="text-xs text-gray-500">ID #{img.id}</div>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Marcar como principal: solo visualmente “activada” en el primer ítem */}
+              {/* Estrella basada en is_main */}
               <button
                 type="button"
                 onClick={() => onSetMain?.(img.id)}
                 title="Marcar como principal"
                 className={`h-9 w-9 grid place-items-center rounded-lg border hover:bg-gray-50 ${
-                  idx === 0 ? "text-yellow-600 border-yellow-300" : ""
+                  img.is_main ? "text-yellow-600 border-yellow-300" : ""
                 }`}
               >
-                <StarIcon className="w-4 h-4" filled={idx === 0} />
+                <StarIcon className="w-4 h-4" filled={img.is_main} />
               </button>
 
               {/* Mover arriba/abajo */}
@@ -128,21 +126,36 @@ export default function ProductImageGallery({
 function ArrowUp(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+      <path
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 15l7-7 7 7"
+      />
     </svg>
   );
 }
 function ArrowDown(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      <path
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19 9l-7 7-7-7"
+      />
     </svg>
   );
 }
 function TrashIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m1 0l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0v14m4-14v14m4-14v14" />
+      <path
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m1 0l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0v14m4-14v14m4-14v14"
+      />
     </svg>
   );
 }
@@ -156,7 +169,12 @@ function StarIcon({ filled, ...props }) {
   }
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 2l2.83 6.63L22 9.24l-5 4.36L18.18 21 12 17.27 5.82 21 7 13.6l-5-4.36 7.17-.61L12 2z" />
+      <path
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 2l2.83 6.63L22 9.24l-5 4.36L18.18 21 12 17.27 5.82 21 7 13.6l-5-4.36 7.17-.61L12 2z"
+      />
     </svg>
   );
 }

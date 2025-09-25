@@ -18,7 +18,7 @@ try {
   }
 
   $stmt = $conn->prepare("
-    SELECT id, url, sort_order, created_at
+    SELECT id, url, sort_order, is_main, created_at
     FROM product_images
     WHERE product_id = ?
     ORDER BY sort_order ASC, created_at DESC
@@ -30,7 +30,13 @@ try {
   $res = $stmt->get_result();
   $images = [];
   while ($row = $res->fetch_assoc()) {
-    $images[] = $row;
+  $images[] = [
+    'id'         => (int)$row['id'],
+    'url'        => $row['url'],
+    'sort_order' => (int)$row['sort_order'],
+    'is_main'    => (int)$row['is_main'],
+    'created_at' => $row['created_at'],
+    ];
   }
   $stmt->close();
 

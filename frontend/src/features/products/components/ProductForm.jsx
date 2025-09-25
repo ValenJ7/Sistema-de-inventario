@@ -168,10 +168,13 @@ export default function ProductForm({
         }
 
         if (uploadedIds.length > 1) {
-          try {
-            await api.post("admin/products/reorder-product-images.php", {
-              product_id: productId,
-              order: uploadedIds,
+          try {s
+            const fd = new FormData();
+            fd.append("product_id", String(productId));
+            uploadedIds.forEach((id) => fd.append("order[]", String(id)));
+
+            await api.post("admin/products/reorder-product-images.php", fd, {
+              headers: { "Content-Type": "multipart/form-data" },
             });
           } catch (e) {
             console.warn("Endpoint de reorden no disponible:", e);

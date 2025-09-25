@@ -12,14 +12,12 @@ try {
     json_error('Método no permitido', 405);
   }
 
-  // Tomar datos del body (JSON o form-data)
+  // Leer datos (acepta JSON o form-data)
   $input = $_POST;
   if (empty($input)) {
     $raw = file_get_contents("php://input");
     $decoded = json_decode($raw, true);
-    if (is_array($decoded)) {
-      $input = $decoded;
-    }
+    if (is_array($decoded)) $input = $decoded;
   }
 
   $productId = isset($input['product_id']) ? (int)$input['product_id'] : 0;
@@ -29,7 +27,7 @@ try {
     json_error('Falta product_id o image_id', 422);
   }
 
-  // Verificar que la imagen pertenece al producto
+  // Validar que la imagen pertenece al producto
   $stmt = $conn->prepare("SELECT id FROM product_images WHERE id = ? AND product_id = ?");
   $stmt->bind_param('ii', $imageId, $productId);
   $stmt->execute();
@@ -41,20 +39,17 @@ try {
     json_error('Imagen no encontrada para este producto', 404);
   }
 
-  // Poner todas como secundarias
-  $upd = $conn->prepare("UPDATE product_images SET sort_order = 1 WHERE product_id = ?");
-  $upd->bind_param('i', $productId);
+  // Marcar todas como secundarias
+  $conn->query("UPDATE product_images SET is_main = 0 WHERE product_id = $productId");
+
+  // Marcar la elegida como principal
+  $upd = $conn->prepare("UPDATE product_images SET is_main = 1 WHERE id = ? AND product_id = ?");
+  $upd->bind_param('ii', $imageId, $productId);
   $upd->execute();
   $upd->close();
-
-  // Poner la elegida como principal
-  $upd2 = $conn->prepare("UPDATE product_images SET sort_order = 0 WHERE id = ?");
-  $upd2->bind_param('i', $imageId);
-  $upd2->execute();
-  $upd2->close();
 
   json_ok(['main_set' => true, 'product_id' => $productId, 'image_id' => $imageId]);
 
 } catch (Throwable $e) {
-  json_error('Error del servidor: ' . $e->getMessage(), 500);
+  json_error('Error del servidor: '.$e->getMessage(), 500);
 }
