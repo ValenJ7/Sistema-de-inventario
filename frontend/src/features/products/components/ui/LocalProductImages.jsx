@@ -9,7 +9,7 @@ export default function LocalProductImages({ value = [], onChange }) {
   // notificar a padre
   useEffect(() => {
     onChange?.(items.map((x, i) => ({ ...x, sort_order: i + 1 })));
-  }, [items]); // eslint-disable-line
+  }, [items]); // eslint-disable-lineee
 
   function handlePick() {
     inputRef.current?.click();
