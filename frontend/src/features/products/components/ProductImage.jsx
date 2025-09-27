@@ -127,7 +127,6 @@ export default function ProductImages({ value = [], onChange }) {
             </div>
 
             <div className="w-20 h-20 overflow-hidden rounded-lg bg-gray-50 border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={it.url}
                 alt={`Imagen ${idx + 1}`}

@@ -120,7 +120,7 @@ export default function ProductImageGallery({
   );
 }
 
-/* Iconos inline */
+/* Iconos*/
 function ArrowUp(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
