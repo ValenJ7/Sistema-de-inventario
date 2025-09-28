@@ -1,7 +1,6 @@
 // components/ProductForm.jsx
 import { useEffect, useState } from "react";
 import api, { uploadProductImage } from "../../../api/backend";
-// import ImagePickerPro from "./ui/ImagePickerPro"; // ❌ eliminado
 import useProductImages from "../hooks/useProductImages";
 import ProductImageGallery from "./ui/ProductImageGallery";
 import LocalProductImages from "./ui/LocalProductImages";
@@ -26,7 +25,7 @@ export default function ProductForm({
   const [categories, setCategories] = useState([]);
   const [variants, setVariants] = useState([{ label: "", stock: 0 }]);
 
-  // estado de imagen sólo se usaba para ImagePickerPro; lo dejamos por si lo reusás
+  // estado de imagen (por si lo reusás más adelante)
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
@@ -168,7 +167,7 @@ export default function ProductForm({
         }
 
         if (uploadedIds.length > 1) {
-          try {s
+          try {
             const fd = new FormData();
             fd.append("product_id", String(productId));
             uploadedIds.forEach((id) => fd.append("order[]", String(id)));
@@ -205,7 +204,7 @@ export default function ProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-8 max-w-lg mx-auto space-y-4">
+    <form id="product-form" onSubmit={handleSubmit} className="mb-8 w-full max-w-none space-y-4">
       <input type="hidden" name="id" value={form.id ?? ""} readOnly />
 
       <div className="grid grid-cols-1 gap-3">
@@ -230,7 +229,7 @@ export default function ProductForm({
             required
           />
 
-        <select
+          <select
             name="category_id"
             className="border p-2 rounded flex-1"
             value={form.category_id}
@@ -305,21 +304,7 @@ export default function ProductForm({
         />
       )}
 
-      <div className="flex justify-end gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => (typeof onFinished === "function" ? onFinished() : null)}
-          className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-        >
-          Cancelar
-        </button>
-        <button
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
-          type="submit"
-        >
-          {selectedProduct ? "Actualizar" : "Agregar Producto"}
-        </button>
-      </div>
+      {/* Sin botones aquí: los maneja el footer del ModalShell */}
     </form>
   );
 }

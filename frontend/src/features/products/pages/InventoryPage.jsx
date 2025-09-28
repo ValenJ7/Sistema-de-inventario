@@ -1,7 +1,9 @@
+// pages/InventoryPage.jsx
 import { useState } from "react";
 import ProductForm from "../components/ProductForm";
 import ProductList from "../components/ProductList";
 import useProducts from "../hooks/useProducts";
+import ModalShell from "../components/ui/ModalShell";
 
 export default function InventoryPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -58,44 +60,39 @@ export default function InventoryPage() {
         reloadToken={reloadToken}
       />
 
-      {/* Modal con el formulario */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
-            {/* Botón cerrar */}
+      {/* Modal con el formulario (fijo, alto limitado y scroll interno) */}
+      <ModalShell
+        open={isModalOpen}
+        onClose={closeModal}
+        title={selectedProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
+        footer={
+          <div className="flex justify-end gap-3">
             <button
               onClick={closeModal}
-              className="absolute top-3 right-3 text-gray-500 hover:text-black"
-              aria-label="Cerrar"
+              className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
+              type="button"
             >
-              ✕
+              Cancelar
             </button>
-
-            <h2 className="text-xl font-semibold mb-4">
-              {selectedProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
-            </h2>
-
-            <ProductForm
-              selectedProduct={selectedProduct}
-              setSelectedProduct={setSelectedProduct}
-              onAddProduct={addProduct}
-              onUpdateProduct={updateProduct}
-              reload={reload}
-              onFinished={closeModal}   // 👈 cierra modal al terminar
-            />
-
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
-                type="button"
-              >
-                Cancelar
-              </button>
-            </div>
+            <button
+              type="submit"
+              form="product-form" // dispara el submit del <form id="product-form">
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold"
+            >
+              {selectedProduct ? "Actualizar" : "Agregar Producto"}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <ProductForm
+          selectedProduct={selectedProduct}
+          setSelectedProduct={setSelectedProduct}
+          onAddProduct={addProduct}
+          onUpdateProduct={updateProduct}
+          reload={reload}
+          onFinished={closeModal} // cierra modal al terminar
+        />
+      </ModalShell>
     </div>
   );
 }
