@@ -1,7 +1,7 @@
 // src/layouts/AdminLayout.jsx
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Menu, Home, ShoppingCart, Package, Tags } from "lucide-react";
+import { Menu, Home, ShoppingCart, BarChart3, Package, Tags } from "lucide-react";
 
 const linkBase =
   "px-2 py-1 text-sm font-medium transition-colors hover:opacity-90";
@@ -31,21 +31,31 @@ export default function AdminLayout() {
                 <Home size={16} /> Inicio
               </span>
             </NavLink>
+
             <NavLink to="/ventas" className={linkClasses}>
               <span className="inline-flex items-center gap-2">
                 <ShoppingCart size={16} /> Ventas
               </span>
             </NavLink>
+
+            <NavLink to="/reportes" className={linkClasses}>
+              <span className="inline-flex items-center gap-2">
+                <BarChart3 size={16} /> Reportes
+              </span>
+            </NavLink>
+
             <NavLink to="/inventario" className={linkClasses}>
               <span className="inline-flex items-center gap-2">
                 <Package size={16} /> Productos
               </span>
             </NavLink>
+
             <NavLink to="/categorias" className={linkClasses}>
               <span className="inline-flex items-center gap-2">
                 <Tags size={16} /> Categorías
               </span>
             </NavLink>
+
           </nav>
 
           {/* Mobile toggle */}
@@ -70,6 +80,11 @@ export default function AdminLayout() {
               <NavLink to="/ventas" className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <ShoppingCart size={16} /> Ventas
+                </span>
+              </NavLink>
+              <NavLink to="/reportes" className={linkClasses} onClick={() => setOpen(false)}>
+                <span className="inline-flex items-center gap-2">
+                  <BarChart3 size={16} /> Reportes
                 </span>
               </NavLink>
               <NavLink to="/inventario" className={linkClasses} onClick={() => setOpen(false)}>

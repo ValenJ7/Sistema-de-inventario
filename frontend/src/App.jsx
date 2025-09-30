@@ -8,6 +8,7 @@ import CategoryPage from "./features/category/pages/CategoryPage";
 import Tienda from "./features/catalog/pages/Tienda";
 import Producto from "./features/catalog/pages/Producto";
 import SalesPage from "./features/sales/pages/SalesPage";
+import ReportsPage from "./features/reports/pages/ReportsPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/ventas" element={<SalesPage />} />
+          <Route path="/reportes" element={<ReportsPage />} />
           <Route path="/inventario" element={<InventoryPage />} />
           <Route path="/categorias" element={<CategoryPage />} />
         </Route>
