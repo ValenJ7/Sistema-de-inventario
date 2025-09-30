@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// features/sales/pages/SalesPage.jsx
+import { useMemo, useRef, useState } from "react";
 import useSales from "../hooks/useSales";
 import useProducts from "../../products/hooks/useProducts";
-import useSaleItems from "../hooks/useSaleItems";
-import useDebouncedValue from "../hooks/useDebouncedValue"; // ver nota abajo
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { money } from "../../../utils/money";
-import { Icon } from "../../../utils/icons";
 
 import SearchBar from "../components/SearchBar";
 import CategoryChips from "../components/CategoryChips";
@@ -15,10 +14,8 @@ import AlertModal from "../../../ui/AlertModal";
 import ConfirmModal from "../../../ui/ConfirmModal";
 import Toast from "../../../ui/Toast";
 
-
-
 export default function SalesPage() {
-  const { createSale, getSales } = useSales();
+  const { createSale } = useSales();
   const { products, reload: reloadProducts } = useProducts();
 
   // UI state
@@ -28,10 +25,6 @@ export default function SalesPage() {
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Detalle de venta (lo dejás si luego lo usás)
-  const [selectedSaleId, setSelectedSaleId] = useState(null);
-  const { sale, loading: loadingItems, error } = useSaleItems(selectedSaleId);
-
   // Filtros
   const searchRef = useRef(null);
   const [q, setQ] = useState("");
@@ -40,10 +33,6 @@ export default function SalesPage() {
 
   // Impuesto solo visual (no impacta backend)
   const TAX_RATE = 0.16;
-
-  useEffect(() => {
-    getSales();
-  }, []);
 
   /* ===== Carrito: acciones ===== */
   const addToCart = (product) => {
@@ -131,14 +120,15 @@ export default function SalesPage() {
     if (res?.success) {
       setToast({ type: "success", message: `Venta creada #${res.data.sale_id} por ${money(res.data.total)}` });
       setCart([]);
-      getSales();
+      // ya no necesitamos refrescar ninguna lista de ventas aquí
       reloadProducts();
     } else {
       setAlert({ type: "error", message: "No se pudo registrar la venta" });
     }
   };
 
-  const holdSale = () => setToast({ type: "info", message: "Venta guardada (en espera) — pronto lo implementamos" });
+  const holdSale = () =>
+    setToast({ type: "info", message: "Venta guardada (en espera) — pronto lo implementamos" });
 
   /* ===== Filtros y datasets ===== */
   const categories = useMemo(() => {
@@ -193,6 +183,7 @@ export default function SalesPage() {
               onAdd={addToCart}
               onInc={incQty}
               onDec={decQty}
+              onUpdateQty={updateQty}
             />
           </div>
 
@@ -210,6 +201,7 @@ export default function SalesPage() {
               onRemove={requestRemove}
               onConfirmSale={confirmSale}
               onHoldSale={holdSale}
+              onUpdateQty={updateQty}
             />
           </aside>
         </div>
