@@ -1,12 +1,14 @@
-// features/reports/pages/ReportsPage.jsx
 import { useEffect, useState } from "react";
 import DateRangeFilter from "../components/DateRangeFilter";
 import KpiGrid from "../components/KpiGrid";
 import SalesHistory from "../components/SalesHistory";
+import SaleDetailModal from "../components/SaleDetailModal";
 
 import useReportsSummary from "../hooks/useReportsSummary";
 import useSalesHistory from "../hooks/useSalesHistory";
+import useSaleDetail from "../hooks/useSaleDetail";
 
+// helpers fecha
 function todayISO() {
   const d = new Date();
   const y = d.getFullYear();
@@ -21,21 +23,27 @@ function addDaysISO(baseISO, days) {
 }
 
 export default function ReportsPage() {
-  // Default: últimos 7 días
+  // rango por defecto: últimos 7 días
   const defaultTo = todayISO();
   const defaultFrom = addDaysISO(defaultTo, -6);
-
   const [range, setRange] = useState({ from: defaultFrom, to: defaultTo });
+
+  // paginación
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
+  // hooks (usan from y to por separado)
   const { summary } = useReportsSummary(range.from, range.to);
   const {
     rows: historyRows,
     total_rows: historyTotal,
   } = useSalesHistory(range.from, range.to, page, pageSize);
 
-  // reset página al cambiar rango
+  // modal detalle
+  const [selectedId, setSelectedId] = useState(null);
+  const { sale } = useSaleDetail(selectedId);
+
+  // reset de página al cambiar el rango
   useEffect(() => { setPage(1); }, [range.from, range.to]);
 
   return (
@@ -56,9 +64,16 @@ export default function ReportsPage() {
             page={page}
             pageSize={pageSize}
             onPageChange={setPage}
+            onRowClick={setSelectedId}   // ← abre modal
           />
         </div>
       </div>
+
+      <SaleDetailModal
+        open={!!selectedId}
+        sale={sale}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }

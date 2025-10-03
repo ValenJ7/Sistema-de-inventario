@@ -1,4 +1,3 @@
-// features/reports/components/SalesHistory.jsx
 import { money } from "../../../utils/money";
 
 function formatDateTime(isoOrDt) {
@@ -6,7 +5,14 @@ function formatDateTime(isoOrDt) {
   return d.toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" });
 }
 
-export default function SalesHistory({ rows = [], totalRows = 0, page = 1, pageSize = 25, onPageChange }) {
+export default function SalesHistory({
+  rows = [],
+  totalRows = 0,
+  page = 1,
+  pageSize = 25,
+  onPageChange,
+  onRowClick, // ← NUEVO
+}) {
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   return (
@@ -23,7 +29,12 @@ export default function SalesHistory({ rows = [], totalRows = 0, page = 1, pageS
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t">
+            <tr
+              key={r.id}
+              className="border-t cursor-pointer hover:bg-gray-50"
+              onClick={() => onRowClick && onRowClick(r.id)}  // ← click
+              title="Ver detalle"
+            >
               <td className="py-2">{formatDateTime(r.created_at)}</td>
               <td className="py-2">{r.items_count}</td>
               <td className="py-2">{money(r.total)}</td>
@@ -31,7 +42,9 @@ export default function SalesHistory({ rows = [], totalRows = 0, page = 1, pageS
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={3} className="py-6 text-center text-gray-500">No hay ventas en el rango</td>
+              <td colSpan={3} className="py-6 text-center text-gray-500">
+                No hay ventas en el rango
+              </td>
             </tr>
           )}
         </tbody>
