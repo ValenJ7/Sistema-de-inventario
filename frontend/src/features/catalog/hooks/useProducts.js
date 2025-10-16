@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
-import api from "../../../api/backend"; // instancia axios
+import api from "../../../api/backend";
 
-// 🔹 Hook para listado de productos (con paginación y "mostrar más")
+// Normaliza lo que venga del backend para que SIEMPRE haya images[] y variants[]
+function normalizeProduct(p) {
+  const images = Array.isArray(p.images) && p.images.length > 0
+    ? p.images
+    : (p.image || p.main_image || p.image_url)
+      ? [{ id: "main", url: p.image || p.main_image || p.image_url, is_main: 1 }]
+      : [];
+
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  return { ...p, images, variants };
+}
+
+// Listado paginado
 export function useProducts(initialParams = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,13 +30,11 @@ export function useProducts(initialParams = {}) {
         params: { ...filters, page: pageToLoad, size },
       });
 
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+      const raw = Array.isArray(res.data) ? res.data : res.data.data || [];
+      const data = raw.map(normalizeProduct);
 
-      if (append) {
-        setProducts((prev) => [...prev, ...data]);
-      } else {
-        setProducts(data);
-      }
+      if (append) setProducts((prev) => [...prev, ...data]);
+      else setProducts(data);
 
       setHasMore(data.length === size);
     } catch (err) {
@@ -49,7 +59,7 @@ export function useProducts(initialParams = {}) {
   return { products, loading, hasMore, loadMore };
 }
 
-// 🔹 Hook para un único producto por slug
+// Detalle por slug
 export function useProduct(slug) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +69,8 @@ export function useProduct(slug) {
     async function fetchProduct() {
       try {
         const res = await api.get("/catalog/products.php", { params: { slug } });
-        setProduct(res.data.data || null);
+        const raw = res.data.data || null;
+        setProduct(raw ? normalizeProduct(raw) : null);
       } catch (err) {
         console.error("Error cargando producto", err);
       } finally {

@@ -31,7 +31,7 @@ export default function PublicLayout() {
 
       {/* 🔹 Footer */}
       <footer className="bg-gray-100 text-center text-gray-600 py-3">
-        © {new Date().getFullYear()} Finance Game. Todos los derechos reservados.
+        © {new Date().getFullYear()} J7. Todos los derechos reservados.
       </footer>
     </div>
   );
