@@ -32,6 +32,7 @@ $sortCol = $sortMap[$sort] ?? 'T.created_at';
 
 /**
  * Subquery base que calcula variantes + stock_total
+ * (acá NO armamos arrays de variantes, solo datos del producto y agregados)
  */
 $baseSelect = "
   SELECT
@@ -44,41 +45,27 @@ $baseSelect = "
     p.category_id,
     c.name AS category_name,
     p.created_at,
-    (
-      SELECT pi.url
-      FROM product_images pi
+
+    (SELECT pi.url
+       FROM product_images pi
       WHERE pi.product_id = p.id
       ORDER BY pi.sort_order ASC, pi.id ASC
-      LIMIT 1
-    ) AS image_path,
-    (
-      SELECT pi.url
-      FROM product_images pi
+      LIMIT 1) AS image_path,
+
+    (SELECT pi.url
+       FROM product_images pi
       WHERE pi.product_id = p.id
       ORDER BY pi.sort_order ASC, pi.id DESC
-      LIMIT 1
-    ) AS main_image,
+      LIMIT 1) AS main_image,
 
     (SELECT COUNT(*) FROM product_variants v WHERE v.product_id = p.id) AS v_count,
-    (SELECT COALESCE(SUM(v2.stock), 0) FROM product_variants v2 WHERE v2.product_id = p.id) AS v_stock_sum,
-    (SELECT MIN(v3.stock) FROM product_variants v3 WHERE v3.product_id = p.id) AS v_stock_min,
-    (SELECT GROUP_CONCAT(v4.label ORDER BY v4.sort_order ASC, v4.id ASC SEPARATOR '|||')
-       FROM product_variants v4
-       WHERE v4.product_id = p.id) AS v_labels,
-    (SELECT GROUP_CONCAT(CONCAT(v5.label, ':', v5.stock)
-            ORDER BY v5.sort_order ASC, v5.id ASC SEPARATOR '|||')
-       FROM product_variants v5
-       WHERE v5.product_id = p.id) AS v_label_stock,
 
     CASE
-      WHEN (SELECT COUNT(*) FROM product_variants v6 WHERE v6.product_id = p.id) > 0
-        THEN (SELECT COALESCE(SUM(v7.stock), 0) FROM product_variants v7 WHERE v7.product_id = p.id)
+      WHEN (SELECT COUNT(*) FROM product_variants v2 WHERE v2.product_id = p.id) > 0
+        THEN (SELECT COALESCE(SUM(v3.stock),0) FROM product_variants v3 WHERE v3.product_id = p.id)
       ELSE p.stock
     END AS stock_total
 
-    /* Si TENÉS columna is_hidden, podés agregarla y filtrar más abajo:
-       , p.is_hidden
-    */
   FROM products p
   LEFT JOIN categories c ON c.id = p.category_id
 ";
@@ -171,56 +158,75 @@ $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 $stmt->close();
 
 /**
- * Post-proceso (igual que antes)
+ * --- NUEVO: cargar variantes en batch con sus IDs ---
+ */
+$variantsByProduct = [];
+if (!empty($rows)) {
+  $ids = array_map(fn($r) => (int)$r['id'], $rows);
+  $in  = implode(',', array_fill(0, count($ids), '?'));
+
+  $sqlV = "
+    SELECT id, product_id, label, stock, sort_order
+    FROM product_variants
+    WHERE product_id IN ($in)
+    ORDER BY product_id ASC, sort_order ASC, id ASC
+  ";
+  $types = str_repeat('i', count($ids));
+  $stmtV = $conn->prepare($sqlV);
+  if ($stmtV) {
+    $stmtV->bind_param($types, ...$ids);
+    if ($stmtV->execute()) {
+      $resV = $stmtV->get_result();
+      while ($v = $resV->fetch_assoc()) {
+        $pid = (int)$v['product_id'];
+        if (!isset($variantsByProduct[$pid])) $variantsByProduct[$pid] = [];
+        $variantsByProduct[$pid][] = [
+          'id'         => (int)$v['id'],
+          'label'      => (string)$v['label'],
+          'stock'      => (int)$v['stock'],
+          'sort_order' => (int)$v['sort_order'],
+        ];
+      }
+    }
+    $stmtV->close();
+  }
+}
+
+/**
+ * Post-proceso final
  */
 $out = [];
 foreach ($rows as $r) {
+  $pid          = (int)$r['id'];
   $hasVariants  = ((int)$r['v_count']) > 0;
-  $labelsConcat = $r['v_labels'] ?? null;
-  $pairsConcat  = $r['v_label_stock'] ?? null;
 
-  $variants_detail = [];
-  $variants_summary = [];
-
-  if ($hasVariants && $pairsConcat !== null && $pairsConcat !== '') {
-    $pairs = explode('|||', $pairsConcat);
-    foreach ($pairs as $pair) {
-      [$label, $qty] = array_pad(explode(':', $pair, 2), 2, '');
-      $label = trim((string)$label);
-      if ($label === '') continue;
-      $stock = is_numeric($qty) ? (int)$qty : null;
-      $variants_detail[] = ['label' => $label, 'stock' => $stock];
-      $variants_summary[] = $label;
-    }
-  } elseif ($hasVariants && $labelsConcat !== null && $labelsConcat !== '') {
-    $variants_summary = array_values(
-      array_filter(array_map('trim', explode('|||', $labelsConcat)), fn($x) => $x !== '')
-    );
-  } else {
-    $labelLegacy = trim((string)($r['size'] ?? ''));
-    if ($labelLegacy === '') $labelLegacy = 'Único';
-    $variants_detail   = [['label' => $labelLegacy, 'stock' => (int)$r['stock']]];
-    $variants_summary  = [$labelLegacy];
-  }
+  // Variantes con IDs si existen, si no generamos legacy "Único"
+  $variants = $hasVariants
+    ? ($variantsByProduct[$pid] ?? [])
+    : [[
+        'id'    => null,
+        'label' => trim((string)($r['size'] ?? '')) ?: 'Único',
+        'stock' => (int)$r['stock'],
+        'sort_order' => 0,
+      ]];
 
   $stock_total = (int)$r['stock_total'];
   $stock_state = ($stock_total > 0) ? 'in' : 'out';
 
   $out[] = [
-    'id'            => (int)$r['id'],
+    'id'            => $pid,
     'name'          => $r['name'],
     'slug'          => $r['slug'],
     'size'          => $r['size'],
     'price'         => (float)$r['price'],
-    'stock'         => (int)$r['stock'],
+    'stock'         => (int)$r['stock'], // legacy
     'category_id'   => $r['category_id'] !== null ? (int)$r['category_id'] : null,
     'category_name' => $r['category_name'] ?? null,
     'image_path'    => $r['image_path'] ?? null,
     'main_image'    => $r['main_image'] ?? null,
-    'variants_detail'  => $variants_detail,
-    'variants_summary' => $variants_summary,
-    'stock_total'      => $stock_total,
-    'stock_state'      => $stock_state,
+    'variants'      => $variants,       // <--- USAR ESTO EN EL FRONT
+    'stock_total'   => $stock_total,
+    'stock_state'   => $stock_state,
   ];
 }
 

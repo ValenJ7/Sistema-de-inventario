@@ -1,6 +1,6 @@
 // features/sales/pages/SalesPage.jsx
 import { useMemo, useRef, useState } from "react";
-import useSales from "../hooks/useSales";
+import useSales from "../hooks/useSales";               // <- ahora también maneja createSale()
 import useProducts from "../../products/hooks/useProducts";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { money } from "../../../utils/money";
@@ -15,11 +15,21 @@ import ConfirmModal from "../../../ui/ConfirmModal";
 import Toast from "../../../ui/Toast";
 
 export default function SalesPage() {
-  const { createSale } = useSales();
   const { products, reload: reloadProducts } = useProducts();
 
+  // Hook de carrito + venta
+  const {
+    items: cart,
+    subtotal: subTotal,
+    getQty,
+    addToCart,
+    inc,
+    dec,
+    remove,
+    createSale,               // <-- ahora viene del hook
+  } = useSales(products);
+
   // UI state
-  const [cart, setCart] = useState([]);
   const [alert, setAlert] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [toast, setToast] = useState(null);
@@ -29,112 +39,101 @@ export default function SalesPage() {
   const searchRef = useRef(null);
   const [q, setQ] = useState("");
   const dq = useDebouncedValue(q, 300);
-  const [categoryFilter, setCategoryFilter] = useState(""); // "" = todas
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  // Impuesto solo visual (no impacta backend)
   const TAX_RATE = 0.16;
 
-  /* ===== Carrito: acciones ===== */
-  const addToCart = (product) => {
-    setCart((prev) => {
-      const found = prev.find((p) => p.product_id === product.id);
-      const maxStock = Number(product.stock ?? 0);
-      if (found) {
-        if (found.quantity + 1 > maxStock) {
-          setToast({ type: "warning", message: `Stock insuficiente: quedan ${maxStock} de "${product.name}"` });
-          return prev;
-        }
-        return prev.map((p) =>
-          p.product_id === product.id ? { ...p, quantity: p.quantity + 1 } : p
-        );
-      }
-      return [...prev, { product_id: product.id, name: product.name, price: product.price, quantity: 1 }];
-    });
+  /* ===== Helpers ===== */
+  const findProduct = (pid) => products.find((p) => p.id === pid) || null;
+  const findVariant = (p, vid) => (p?.variants || []).find((v) => v.id === vid) || null;
+
+  const updateQty = (pid, vid, qty) => {
+    const p = findProduct(pid);
+    const v = findVariant(p, vid);
+    const available = v ? Number(v.stock || 0) : Number(p?.stock_total ?? p?.stock ?? 0);
+    const target = Math.max(1, Math.min(Number(qty || 1), available));
+    const current = cart.find((i) => i.product_id === pid && (i.variant_id ?? null) === (vid ?? null))?.quantity ?? 0;
+    if (target === current) return;
+
+    if (target < current) {
+      for (let i = 0; i < current - target; i++) dec(pid, vid);
+    } else {
+      for (let i = 0; i < target - current; i++) inc(pid, vid);
+    }
   };
 
-  const incQty = (id) => {
-    const product = products.find((p) => p.id === id);
-    if (!product) return;
-    setCart((prev) =>
-      prev.map((p) => {
-        if (p.product_id !== id) return p;
-        const max = Number(product.stock ?? 0);
-        const next = Math.min(p.quantity + 1, max);
-        if (next === p.quantity) {
-          setToast({ type: "warning", message: `Stock máximo para ${product.name}` });
-        }
-        return { ...p, quantity: next };
-      })
-    );
-  };
-
-  const decQty = (id) => {
-    setCart((prev) =>
-      prev.flatMap((p) =>
-        p.product_id === id ? (p.quantity - 1 <= 0 ? [] : [{ ...p, quantity: p.quantity - 1 }]) : [p]
-      )
-    );
-  };
-
-  const updateQty = (id, qty) => {
-    setCart((prev) =>
-      prev.map((p) => {
-        if (p.product_id !== id) return p;
-        const product = products.find((pr) => pr.id === id);
-        const maxStock = Number(product?.stock ?? 0);
-        const v = Math.max(1, Math.min(Number(qty || 1), maxStock));
-        return { ...p, quantity: v };
-      })
-    );
-  };
-
-  const requestRemove = (id) => {
-    const product = cart.find((p) => p.product_id === id);
+  const requestRemove = (pid, vid = null) => {
+    const it = cart.find((i) => i.product_id === pid && (i.variant_id ?? null) === (vid ?? null));
     setConfirm({
-      message: `¿Eliminar "${product?.name}" del carrito?`,
+      message: `¿Eliminar "${it?.name}${it?.size ? ` (${it.size})` : ""}" del carrito?`,
       onConfirm: () => {
-        setCart((prev) => prev.filter((p) => p.product_id !== id));
+        remove(pid, vid);
         setConfirm(null);
         setToast({ type: "info", message: "Producto eliminado" });
       },
     });
   };
 
+  /* ===== Guardar venta ===== */
   const confirmSale = async () => {
-    if (cart.length === 0 || isSaving) return;
+    if (!cart.length || isSaving) return;
 
-    // Rechequeo rápido de stock antes de enviar
-    for (const item of cart) {
-      const product = products.find((p) => p.id === item.product_id);
-      if (product && item.quantity > product.stock) {
-        setAlert({ type: "warning", message: `Stock insuficiente: ${product.name} (stock ${product.stock})` });
+    // Rechequeo de stock antes de enviar
+    for (const it of cart) {
+      const p = findProduct(it.product_id);
+      if (!p) continue;
+      const v = findVariant(p, it.variant_id ?? null);
+      const available = v ? Number(v.stock || 0) : Number(p.stock_total ?? p.stock ?? 0);
+      if (it.quantity > available) {
+        setAlert({
+          type: "warning",
+          message: `Stock insuficiente: ${p.name}${it.size ? ` (${it.size})` : ""} (stock ${available})`,
+        });
         return;
       }
     }
 
     setIsSaving(true);
-    const items = cart.map((c) => ({ product_id: c.product_id, quantity: c.quantity }));
-    const res = await createSale(items);
+
+    const payload = cart.map((c) => ({
+      product_id: c.product_id,
+      variant_id: c.variant_id ?? null,
+      size: c.size ?? null,
+      quantity: c.quantity,
+      price: c.price,
+    }));
+
+    const res = await createSale(payload);  // <--- usa la del hook
     setIsSaving(false);
 
     if (res?.success) {
-      setToast({ type: "success", message: `Venta creada #${res.data.sale_id} por ${money(res.data.total)}` });
-      setCart([]);
-      // ya no necesitamos refrescar ninguna lista de ventas aquí
-      reloadProducts();
+      setToast({
+        type: "success",
+        message: `Venta creada #${res.data.sale_id} por ${money(res.data.total)}`,
+      });
+
+      for (const it of cart) remove(it.product_id, it.variant_id ?? null);
+      reloadProducts(); // recargar stock
     } else {
-      setAlert({ type: "error", message: "No se pudo registrar la venta" });
+      setAlert({
+        type: "error",
+        message: res?.error || "No se pudo registrar la venta",
+      });
     }
   };
 
   const holdSale = () =>
-    setToast({ type: "info", message: "Venta guardada (en espera) — pronto lo implementamos" });
+    setToast({
+      type: "info",
+      message: "Venta guardada (en espera) — pronto lo implementamos",
+    });
 
   /* ===== Filtros y datasets ===== */
   const categories = useMemo(() => {
     const map = new Map();
     for (const p of products) {
-      if (p.category_id != null) map.set(String(p.category_id), p.category_name ?? `Cat. ${p.category_id}`);
+      if (p.category_id != null)
+        map.set(String(p.category_id), p.category_name ?? `Cat. ${p.category_id}`);
     }
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [products]);
@@ -152,7 +151,6 @@ export default function SalesPage() {
   }, [products, dq, categoryFilter]);
 
   /* ===== Totales ===== */
-  const subTotal = cart.reduce((acc, it) => acc + it.price * it.quantity, 0);
   const taxes = subTotal * TAX_RATE;
   const total = subTotal + taxes;
 
@@ -179,11 +177,10 @@ export default function SalesPage() {
 
             <ProductGrid
               products={filtered}
-              cart={cart}
-              onAdd={addToCart}
-              onInc={incQty}
-              onDec={decQty}
-              onUpdateQty={updateQty}
+              getQty={(pid, vid) => getQty(pid, vid)}
+              onAdd={(prod, variant) => addToCart(prod, variant)}
+              onInc={(pid, vid) => inc(pid, vid)}
+              onDec={(pid, vid) => dec(pid, vid)}
             />
           </div>
 
@@ -196,19 +193,25 @@ export default function SalesPage() {
               total={total}
               taxRate={TAX_RATE}
               isSaving={isSaving}
-              onDec={decQty}
-              onInc={incQty}
-              onRemove={requestRemove}
+              onDec={(pid, vid) => dec(pid, vid)}
+              onInc={(pid, vid) => inc(pid, vid)}
+              onRemove={(pid, vid) => requestRemove(pid, vid)}
               onConfirmSale={confirmSale}
               onHoldSale={holdSale}
-              onUpdateQty={updateQty}
+              onUpdateQty={(pid, vid, qty) => updateQty(pid, vid, qty)}
             />
           </aside>
         </div>
       </div>
 
       {/* Modales & Toasts */}
-      {alert && <AlertModal type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
+      {alert && (
+        <AlertModal
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert(null)}
+        />
+      )}
       {confirm && (
         <ConfirmModal
           message={confirm.message}
@@ -216,7 +219,13 @@ export default function SalesPage() {
           onCancel={() => setConfirm(null)}
         />
       )}
-      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
