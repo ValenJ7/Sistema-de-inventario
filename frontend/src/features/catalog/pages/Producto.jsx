@@ -46,41 +46,189 @@ export default function Producto() {
   if (!product) return <p className="p-6 text-gray-600">Producto no encontrado</p>;
 
   return (
-    <div className="container mx-auto px-4 py-10 relative">
-      {/* ✅ Toast */}
-      {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-lg shadow-md z-50">
-          {toast}
-        </div>
-      )}
+    <div className="bg-[#FAFAFA] text-[#222] font-[Inter]">
+      <div className="container mx-auto px-4 py-12 relative">
+        {/* Toast */}
+        {toast && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-lg shadow-md z-50">
+            {toast}
+          </div>
+        )}
 
-      {/* GRID principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_100px_400px] gap-8 items-start">
-        {/* Imagen principal */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100 shadow-inner">
-          {images.length > 0 && (
-            <img
-              src={getImageUrl(images[activeIdx]?.url)}
-              alt={product.name}
-              draggable={false}
-              className={`w-full h-full object-cover transition-all duration-500 ease-out cursor-zoom-in ${
-                fade ? "opacity-0 scale-105" : "opacity-100 scale-100"
-              }`}
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-[65fr_10fr_35fr] gap-8 items-start">
+          {/* Imagen principal */}
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100">
+            {images.length > 0 && (
+              <img
+                src={getImageUrl(images[activeIdx]?.url)}
+                alt={product.name}
+                draggable={false}
+                className={`w-full h-full object-cover transition-all duration-500 ease-out cursor-zoom-in ${
+                  fade ? "opacity-0 scale-105" : "opacity-100 scale-100"
+                }`}
+              />
+            )}
+          </div>
+
+          {/* Miniaturas verticales a la derecha */}
+          {images.length > 1 && (
+            <div className="hidden lg:flex flex-col gap-2 sticky top-24 items-start">
+              {images.map((img, idx) => (
+                <button
+                  key={img.id ?? idx}
+                  onClick={() => handleThumbnailClick(idx)}
+                  className={`border rounded-md overflow-hidden transition-all duration-200 hover:border-gray-800 ${
+                    activeIdx === idx
+                      ? "border-gray-800 ring-1 ring-gray-800"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <img
+                    src={getImageUrl(img.url)}
+                    alt=""
+                    className="object-cover w-20 h-20"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
           )}
+
+          {/* Panel derecho */}
+          <div className="flex flex-col gap-8 pt-4">
+            {/* Info básica */}
+            <div>
+              <h1 className="text-[28px] font-light tracking-wide uppercase text-gray-900 mb-2">
+                {product.name}
+              </h1>
+              <p className="text-xl font-semibold text-gray-800 mb-1">
+                ${priceFormatted}
+              </p>
+              {selectedVariant ? (
+                <p className="text-sm text-gray-500">
+                  Stock talle {selectedVariant.label}: {selectedVariant.stock}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  {variants.length ? "Elegí un talle" : `Stock: ${product.stock}`}
+                </p>
+              )}
+            </div>
+
+            {/* Selector de talle */}
+            {variants.length > 0 && (
+              <div>
+                <p className="text-xs uppercase text-gray-500 tracking-wider mb-3">
+                  Talle
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {variants.map((v) => {
+                    const disabled = (v.stock ?? 0) <= 0;
+                    const selected = selectedVariantId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        disabled={disabled}
+                        onClick={() => setSelectedVariantId(v.id)}
+                        className={`px-5 py-2 rounded-full border text-sm transition-all duration-200
+                          ${
+                            selected
+                              ? "border-gray-800 bg-gray-900 text-white"
+                              : "border-gray-300 bg-transparent text-gray-800 hover:border-gray-800"
+                          }
+                          ${disabled ? "opacity-40 cursor-not-allowed" : ""}
+                        `}
+                      >
+                        {v.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Selector de cantidad */}
+            <div>
+              <p className="text-xs uppercase text-gray-500 tracking-wider mb-3">
+                Cantidad
+              </p>
+              <div className="flex items-center border border-gray-300 w-fit rounded-full overflow-hidden">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="px-4 py-2 hover:bg-gray-100 text-lg font-semibold"
+                >
+                  −
+                </button>
+                <span className="px-5 text-sm">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="px-4 py-2 hover:bg-gray-100 text-lg font-semibold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Botón agregar */}
+            <div className="pt-2">
+              <button
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                className={`w-full px-8 py-4 rounded-full text-sm font-semibold uppercase tracking-widest transition-all duration-300
+                  ${
+                    canAddToCart
+                      ? "bg-black text-white hover:bg-[#222]"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+              >
+                Agregar al carrito
+              </button>
+            </div>
+
+            {/* Descripción / Detalles */}
+            <div className="border-t border-gray-200 pt-6">
+              <details className="border-b py-4 group">
+                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
+                  Detalles de la prenda
+                  <span className="transition-transform group-open:rotate-180">⌄</span>
+                </summary>
+                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  {product.description || "Producto de alta calidad con diseño moderno."}
+                </p>
+              </details>
+
+              <details className="border-b py-4 group">
+                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
+                  Envíos
+                  <span className="transition-transform group-open:rotate-180">⌄</span>
+                </summary>
+                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  Envíos a todo el país. Entrega estimada entre 3 y 5 días hábiles.
+                </p>
+              </details>
+
+              <details className="border-b py-4 group">
+                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
+                  Cambios y devoluciones
+                  <span className="transition-transform group-open:rotate-180">⌄</span>
+                </summary>
+                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  Tenés 15 días para cambios o devoluciones en tiendas o por correo.
+                </p>
+              </details>
+            </div>
+          </div>
         </div>
 
-        {/* ✅ Miniaturas verticales a la derecha */}
+        {/* Mobile: galería horizontal */}
         {images.length > 1 && (
-          <div className="hidden lg:flex flex-col gap-2 sticky top-24 items-start">
+          <div className="flex gap-2 mt-4 lg:hidden overflow-x-auto">
             {images.map((img, idx) => (
               <button
                 key={img.id ?? idx}
                 onClick={() => handleThumbnailClick(idx)}
-                className={`border rounded-md overflow-hidden transition-all duration-200 hover:border-gray-800 ${
-                  activeIdx === idx
-                    ? "border-gray-800 ring-1 ring-gray-800"
-                    : "border-gray-200"
+                className={`border rounded-md overflow-hidden flex-shrink-0 transition-all duration-200 ${
+                  activeIdx === idx ? "border-gray-800" : "border-gray-200"
                 }`}
               >
                 <img
@@ -93,127 +241,7 @@ export default function Producto() {
             ))}
           </div>
         )}
-
-        {/* Panel derecho */}
-        <div className="flex flex-col gap-6">
-          {/* Info básica */}
-          <div>
-            <h1 className="text-3xl font-light tracking-wide text-gray-900 mb-2">
-              {product.name}
-            </h1>
-            <p className="text-2xl font-semibold text-gray-800 mb-1">
-              ${priceFormatted}
-            </p>
-
-            {selectedVariant ? (
-              <p className="text-sm text-gray-500">
-                Stock talle {selectedVariant.label}: {selectedVariant.stock}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">
-                {variants.length ? "Elegí un talle" : `Stock: ${product.stock}`}
-              </p>
-            )}
-          </div>
-
-          {/* Selector de talle */}
-          {variants.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Talle</p>
-              <div className="flex flex-wrap gap-3">
-                {variants.map((v) => {
-                  const disabled = (v.stock ?? 0) <= 0;
-                  const selected = selectedVariantId === v.id;
-                  return (
-                    <button
-                      key={v.id}
-                      disabled={disabled}
-                      onClick={() => setSelectedVariantId(v.id)}
-                      className={`px-5 py-2 rounded-full border text-sm transition-all duration-200
-                        ${
-                          selected
-                            ? "bg-black text-white border-black"
-                            : "border-gray-300 bg-white text-gray-800 hover:border-black"
-                        }
-                        ${disabled ? "opacity-40 cursor-not-allowed" : ""}
-                      `}
-                    >
-                      {v.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Selector de cantidad */}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-3">Cantidad</p>
-            <div className="flex items-center border border-gray-300 w-fit rounded-lg overflow-hidden">
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="px-3 py-2 hover:bg-gray-100 text-lg font-semibold"
-              >
-                −
-              </button>
-              <span className="px-4">{quantity}</span>
-              <button
-                onClick={() => setQuantity((q) => q + 1)}
-                className="px-3 py-2 hover:bg-gray-100 text-lg font-semibold"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Botón agregar */}
-          <div className="pt-2">
-            <button
-              onClick={handleAddToCart}
-              disabled={!canAddToCart}
-              className={`w-full px-8 py-4 rounded-lg text-sm font-medium uppercase tracking-wider transition-all duration-300
-                ${
-                  canAddToCart
-                    ? "bg-black text-white hover:bg-gray-800"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                }`}
-            >
-              Agregar al carrito
-            </button>
-          </div>
-
-          {/* Descripción */}
-          {product.description && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
-                {product.description}
-              </p>
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* ✅ Mobile: galería horizontal */}
-      {images.length > 1 && (
-        <div className="flex gap-2 mt-4 lg:hidden overflow-x-auto">
-          {images.map((img, idx) => (
-            <button
-              key={img.id ?? idx}
-              onClick={() => handleThumbnailClick(idx)}
-              className={`border rounded-md overflow-hidden flex-shrink-0 transition-all duration-200 ${
-                activeIdx === idx ? "border-gray-800" : "border-gray-200"
-              }`}
-            >
-              <img
-                src={getImageUrl(img.url)}
-                alt=""
-                className="object-cover w-20 h-20"
-                draggable={false}
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
