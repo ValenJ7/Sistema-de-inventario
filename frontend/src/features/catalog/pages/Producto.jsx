@@ -3,6 +3,9 @@ import { useProduct } from "../hooks";
 import { useMemo, useState } from "react";
 import { getImageUrl } from "../../../utils/getImageUrl";
 
+// 🆕 import del hook del carrito
+import useCart from "../../cart/useCart";
+
 export default function Producto() {
   const { slug } = useParams();
   const { product, loading } = useProduct(slug);
@@ -13,9 +16,12 @@ export default function Producto() {
   const [quantity, setQuantity] = useState(1);
   const [toast, setToast] = useState("");
 
+  const { addItem } = useCart(); // 🆕 del contexto del carrito
+
   const images = useMemo(() => product?.images ?? [], [product]);
   const variants = useMemo(() => product?.variants ?? [], [product]);
-  const selectedVariant = variants.find((v) => v.id === selectedVariantId) || null;
+  const selectedVariant =
+    variants.find((v) => v.id === selectedVariantId) || null;
 
   const productOutOfStock = variants.length
     ? variants.every((v) => (v?.stock ?? 0) <= 0)
@@ -29,8 +35,29 @@ export default function Producto() {
 
   const handleAddToCart = () => {
     if (!canAddToCart) return;
+
+    // 🧩 Agregar producto al carrito
+    const variantLabel = selectedVariant?.label || null;
+    const stock = selectedVariant?.stock ?? product.stock ?? undefined;
+
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: getImageUrl(images?.[0]?.url ?? ""),
+        slug: product.slug,
+      },
+      { qty: quantity, variant: variantLabel, stock }
+    );
+
+    // 🟢 Mostrar toast corto (visual rápido)
     setToast("Producto agregado al carrito");
-    setTimeout(() => setToast(""), 1800);
+    setTimeout(() => setToast(""), 2000);
+
+    // 🛒 Disparar apertura del carrito
+    const evt = new CustomEvent("openCartDrawer");
+    window.dispatchEvent(evt);
   };
 
   const handleThumbnailClick = (index) => {
@@ -42,15 +69,17 @@ export default function Producto() {
     }, 200);
   };
 
-  if (loading) return <p className="p-6 text-gray-600">Cargando producto...</p>;
-  if (!product) return <p className="p-6 text-gray-600">Producto no encontrado</p>;
+  if (loading)
+    return <p className="p-6 text-gray-600">Cargando producto...</p>;
+  if (!product)
+    return <p className="p-6 text-gray-600">Producto no encontrado</p>;
 
   return (
     <div className="bg-[#FAFAFA] text-[#222] font-[Inter]">
       <div className="container mx-auto px-4 py-12 relative">
-        {/* Toast */}
+        {/* 🟢 Toast */}
         {toast && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-lg shadow-md z-50">
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-md z-50">
             {toast}
           </div>
         )}
@@ -70,7 +99,7 @@ export default function Producto() {
             )}
           </div>
 
-          {/* Miniaturas verticales a la derecha */}
+          {/* Miniaturas verticales */}
           {images.length > 1 && (
             <div className="hidden lg:flex flex-col gap-2 sticky top-24 items-start">
               {images.map((img, idx) => (
@@ -110,7 +139,9 @@ export default function Producto() {
                 </p>
               ) : (
                 <p className="text-sm text-gray-500">
-                  {variants.length ? "Elegí un talle" : `Stock: ${product.stock}`}
+                  {variants.length
+                    ? "Elegí un talle"
+                    : `Stock: ${product.stock}`}
                 </p>
               )}
             </div>
@@ -187,35 +218,7 @@ export default function Producto() {
 
             {/* Descripción / Detalles */}
             <div className="border-t border-gray-200 pt-6">
-              <details className="border-b py-4 group">
-                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
-                  Detalles de la prenda
-                  <span className="transition-transform group-open:rotate-180">⌄</span>
-                </summary>
-                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                  {product.description || "Producto de alta calidad con diseño moderno."}
-                </p>
-              </details>
-
-              <details className="border-b py-4 group">
-                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
-                  Envíos
-                  <span className="transition-transform group-open:rotate-180">⌄</span>
-                </summary>
-                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                  Envíos a todo el país. Entrega estimada entre 3 y 5 días hábiles.
-                </p>
-              </details>
-
-              <details className="border-b py-4 group">
-                <summary className="cursor-pointer font-medium text-gray-800 flex justify-between items-center">
-                  Cambios y devoluciones
-                  <span className="transition-transform group-open:rotate-180">⌄</span>
-                </summary>
-                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                  Tenés 15 días para cambios o devoluciones en tiendas o por correo.
-                </p>
-              </details>
+              {/* … tu bloque de detalles igual … */}
             </div>
           </div>
         </div>

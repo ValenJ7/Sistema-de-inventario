@@ -1,19 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
-import {
-  ShoppingBag,
-  User,
-  Menu,
-  Search,
-  X,
-  ChevronDown,
-} from "lucide-react";
+import { User, Menu, Search, X, ChevronDown } from "lucide-react";
 import { useCategories } from "../features/catalog/hooks/useCategories";
+
+// 🆕 Imports del carrito
+import CartButton from "../features/cart/components/CartButton";
+import CartDrawer from "../features/cart/components/CartDrawer";
 
 export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false); // 🔍 buscador visible
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false); // 🛒 Drawer del carrito
 
   // 🧠 Estados globales
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -27,6 +25,13 @@ export default function PublicLayout() {
     setSearchOpen(!searchOpen);
   };
 
+  // 🧩 Escuchar evento global para abrir el carrito
+  useEffect(() => {
+    const handleOpen = () => setDrawerOpen(true);
+    window.addEventListener("openCartDrawer", handleOpen);
+    return () => window.removeEventListener("openCartDrawer", handleOpen);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-[#FAFAFA] text-[#222] font-[Inter]">
       {/* HEADER */}
@@ -37,7 +42,7 @@ export default function PublicLayout() {
             <button
               onClick={() => {
                 setMenuOpen(!menuOpen);
-                setSearchOpen(false); // cerrar buscador si se abre menú
+                setSearchOpen(false);
               }}
               className="text-gray-800 hover:text-black transition-colors"
             >
@@ -62,13 +67,13 @@ export default function PublicLayout() {
             <Link to="/login" className="hover:text-black" title="Cuenta">
               <User size={22} />
             </Link>
-            <Link to="/carrito" className="hover:text-black" title="Carrito">
-              <ShoppingBag size={22} />
-            </Link>
+
+            {/* 🆕 Botón del carrito */}
+            <CartButton onClick={() => setDrawerOpen(true)} />
           </div>
         </div>
 
-        {/* 🔍 BARRA DE BÚSQUEDA CON ANIMACIÓN */}
+        {/* 🔍 BARRA DE BÚSQUEDA */}
         {searchOpen && (
           <div className="border-t border-gray-200 bg-white py-5 px-8 flex items-center justify-center animate-slideDown">
             <div className="flex items-center w-full max-w-xl border-b border-gray-300 focus-within:border-black transition-colors">
@@ -85,12 +90,13 @@ export default function PublicLayout() {
                 className="ml-3 text-gray-500 hover:text-black transition-colors flex items-center gap-1"
               >
                 <Search size={20} />
-                <span className="hidden sm:inline text-sm font-medium">Buscar</span>
+                <span className="hidden sm:inline text-sm font-medium">
+                  Buscar
+                </span>
               </button>
             </div>
           </div>
         )}
-
 
         {/* MENÚ DESPLEGABLE */}
         {menuOpen && (
@@ -184,6 +190,16 @@ export default function PublicLayout() {
       <footer className="bg-[#F7F7F7] border-t border-gray-200 text-center text-gray-600 py-4 text-sm">
         © {new Date().getFullYear()} J7. Todos los derechos reservados.
       </footer>
+
+      {/* 🆕 Drawer del carrito */}
+      <CartDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onCheckout={() => {
+          setDrawerOpen(false);
+          window.location.href = "/checkout";
+        }}
+      />
     </div>
   );
 }
