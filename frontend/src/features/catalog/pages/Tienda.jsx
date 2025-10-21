@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import { useProducts, useCategories } from "../hooks";
+import { useProducts } from "../hooks";
 
 export default function Tienda() {
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const { selectedCategory, searchTerm, categories } = useOutletContext();
 
   const { products, loading, hasMore, loadMore } = useProducts({
     ...(selectedCategory ? { category: selectedCategory } : {}),
@@ -12,42 +11,23 @@ export default function Tienda() {
     size: 8,
   });
 
-  const { categories, loading: loadingCategories } = useCategories();
+  // 🏷️ Buscar el nombre de la categoría actual
+  const categoryName = selectedCategory
+    ? categories.find((c) => c.id == selectedCategory)?.name
+    : null;
 
   if (loading && products.length === 0) return <p>Cargando...</p>;
-  if (loadingCategories) return <p>Cargando categorías...</p>;
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6">Tienda</h1>
+      <h1 className="text-2xl font-bold mb-6 text-center">
+        {categoryName || "Tienda"}
+      </h1>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <input
-          type="text"
-          placeholder="Buscar producto..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="border rounded-lg px-3 py-2 w-full sm:flex-1"
-        />
-
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="border rounded-lg px-3 py-2 w-full sm:w-auto"
-        >
-          <option value="">Todas las categorías</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Grilla adaptativa */}
       {products.length === 0 ? (
-        <p className="text-gray-500">No hay productos disponibles.</p>
+        <p className="text-gray-500 text-center">
+          No hay productos disponibles.
+        </p>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
