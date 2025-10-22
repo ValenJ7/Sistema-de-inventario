@@ -16,9 +16,9 @@ export default function LoginPage() {
       toast.success("Sesión iniciada correctamente");
 
       if (user.role === "admin") {
-        navigate("/"); // redirige al dashboard
+        navigate("/"); // Redirige al dashboard
       } else {
-        navigate("/tienda"); // redirige al eCommerce público
+        navigate("/tienda"); // Redirige al eCommerce público
       }
     } catch (err) {
       console.error(err);
@@ -61,6 +61,14 @@ export default function LoginPage() {
         >
           {loading ? "Ingresando..." : "Entrar"}
         </button>
+
+        {/* 👇 Enlace para ir al registro */}
+        <p className="text-sm text-center text-gray-600">
+          ¿No tienes una cuenta?{" "}
+          <a href="/register" className="text-blue-600 hover:underline">
+            Crear una
+          </a>
+        </p>
       </form>
     </div>
   );

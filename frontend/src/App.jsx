@@ -19,7 +19,8 @@ import { CartProvider } from "./features/cart/CartContext";
 import CheckoutPage from "./features/cart/pages/CheckoutPage";
 
 // Autenticación
-import LoginPage from "./features/auth/pages/LoginPage";
+import AuthPage from "./features/auth/pages/AuthPage"; // 👈 Nuevo (reemplaza LoginPage)
+import RegisterPage from "./features/auth/pages/RegisterPage";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 
 export default function App() {
@@ -41,8 +42,9 @@ export default function App() {
           <Route path="/categorias" element={<CategoryPage />} />
         </Route>
 
-        {/* 🔹 Login público */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* 🔹 Login / Registro públicos */}
+        <Route path="/login" element={<AuthPage />} /> {/* 👈 Vista combinada tipo Rapsodia */}
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* 🔹 Bloque Público (tienda + carrito) */}
         <Route
