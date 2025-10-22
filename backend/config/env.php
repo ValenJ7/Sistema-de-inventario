@@ -14,4 +14,6 @@ return [
 
   // Incluye OPTIONS (y PATCH si algún endpoint lo usa)
   'CORS_ALLOW_METHODS' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+
+  'JWT_SECRET' => 'Ginebra-2025',
 ];
