@@ -1,7 +1,15 @@
-// src/layouts/AdminLayout.jsx
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { Menu, Home, ShoppingCart, BarChart3, Package, Tags } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  Home,
+  ShoppingCart,
+  BarChart3,
+  Package,
+  Tags,
+  LogOut,
+} from "lucide-react";
+import toast from "react-hot-toast";
 
 const linkBase =
   "px-2 py-1 text-sm font-medium transition-colors hover:opacity-90";
@@ -10,6 +18,15 @@ const linkClasses = ({ isActive }) =>
 
 export default function AdminLayout() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // 🔒 Función para cerrar sesión
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    toast.success("Sesión cerrada correctamente");
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -56,6 +73,13 @@ export default function AdminLayout() {
               </span>
             </NavLink>
 
+            {/* 🔸 Botón de cerrar sesión */}
+            <button
+              onClick={handleLogout}
+              className="ml-4 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition"
+            >
+              <LogOut size={16} /> Salir
+            </button>
           </nav>
 
           {/* Mobile toggle */}
@@ -72,31 +96,63 @@ export default function AdminLayout() {
         {open && (
           <nav className="md:hidden border-t border-white/10 bg-slate-900/95">
             <div className="px-4 py-2 flex flex-col gap-2">
-              <NavLink to="/" end className={linkClasses} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/"
+                end
+                className={linkClasses}
+                onClick={() => setOpen(false)}
+              >
                 <span className="inline-flex items-center gap-2">
                   <Home size={16} /> Inicio
                 </span>
               </NavLink>
-              <NavLink to="/ventas" className={linkClasses} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/ventas"
+                className={linkClasses}
+                onClick={() => setOpen(false)}
+              >
                 <span className="inline-flex items-center gap-2">
                   <ShoppingCart size={16} /> Ventas
                 </span>
               </NavLink>
-              <NavLink to="/reportes" className={linkClasses} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/reportes"
+                className={linkClasses}
+                onClick={() => setOpen(false)}
+              >
                 <span className="inline-flex items-center gap-2">
                   <BarChart3 size={16} /> Reportes
                 </span>
               </NavLink>
-              <NavLink to="/inventario" className={linkClasses} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/inventario"
+                className={linkClasses}
+                onClick={() => setOpen(false)}
+              >
                 <span className="inline-flex items-center gap-2">
                   <Package size={16} /> Productos
                 </span>
               </NavLink>
-              <NavLink to="/categorias" className={linkClasses} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/categorias"
+                className={linkClasses}
+                onClick={() => setOpen(false)}
+              >
                 <span className="inline-flex items-center gap-2">
                   <Tags size={16} /> Categorías
                 </span>
               </NavLink>
+
+              {/* 🔸 Logout también en mobile */}
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setOpen(false);
+                }}
+                className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white mt-2"
+              >
+                <LogOut size={16} /> Salir
+              </button>
             </div>
           </nav>
         )}
