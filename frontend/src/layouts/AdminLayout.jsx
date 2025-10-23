@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -8,6 +8,7 @@ import {
   Package,
   Tags,
   LogOut,
+  Store, // 🆕 icono para “Tienda”
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -19,6 +20,17 @@ const linkClasses = ({ isActive }) =>
 export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const [user, setUser] = useState(null); // 🆕 Guardar info del usuario
+
+  // Cargar usuario del localStorage
+  useEffect(() => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      setUser(storedUser);
+    } catch {
+      setUser(null);
+    }
+  }, []);
 
   // 🔒 Función para cerrar sesión
   const handleLogout = () => {
@@ -72,6 +84,16 @@ export default function AdminLayout() {
                 <Tags size={16} /> Categorías
               </span>
             </NavLink>
+
+            {/* 🆕 Solo mostrar si es admin */}
+            {user?.role === "admin" && (
+              <button
+                onClick={() => navigate("/tienda")}
+                className="ml-2 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition"
+              >
+                <Store size={16} /> Ver tienda
+              </button>
+            )}
 
             {/* 🔸 Botón de cerrar sesión */}
             <button
@@ -142,6 +164,19 @@ export default function AdminLayout() {
                   <Tags size={16} /> Categorías
                 </span>
               </NavLink>
+
+              {/* 🆕 Opción “Ver tienda” también en mobile */}
+              {user?.role === "admin" && (
+                <button
+                  onClick={() => {
+                    navigate("/tienda");
+                    setOpen(false);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition"
+                >
+                  <Store size={16} /> Ver tienda
+                </button>
+              )}
 
               {/* 🔸 Logout también en mobile */}
               <button

@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
-import { User, Menu, Search, X, ChevronDown } from "lucide-react";
+import { Menu, Search, X, ChevronDown } from "lucide-react";
 import { useCategories } from "../features/catalog/hooks/useCategories";
 
-// 🆕 Imports del carrito
+// 🆕 Imports del carrito y usuario
 import CartButton from "../features/cart/components/CartButton";
 import CartDrawer from "../features/cart/components/CartDrawer";
+import UserMenu from "../features/auth/components/UserMenu"; // 👈 Nuevo import
 
 export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false); // 🛒 Drawer del carrito
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // 🧠 Estados globales
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -56,6 +57,7 @@ export default function PublicLayout() {
 
           {/* DERECHA: ÍCONOS */}
           <div className="flex items-center gap-6 text-gray-800">
+            {/* 🔍 Buscar */}
             <button
               onClick={handleSearchToggle}
               className="hover:text-black transition-colors"
@@ -64,11 +66,10 @@ export default function PublicLayout() {
               {searchOpen ? <X size={22} /> : <Search size={22} />}
             </button>
 
-            <Link to="/login" className="hover:text-black" title="Cuenta">
-              <User size={22} />
-            </Link>
+            {/* 👤 Usuario (dinámico con UserMenu) */}
+            <UserMenu />
 
-            {/* 🆕 Botón del carrito */}
+            {/* 🛒 Carrito */}
             <CartButton onClick={() => setDrawerOpen(true)} />
           </div>
         </div>
@@ -191,7 +192,7 @@ export default function PublicLayout() {
         © {new Date().getFullYear()} J7. Todos los derechos reservados.
       </footer>
 
-      {/* 🆕 Drawer del carrito */}
+      {/* 🛒 Drawer del carrito */}
       <CartDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
