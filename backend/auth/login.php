@@ -1,21 +1,20 @@
 <?php
 // backend/auth/login.php
 
-// === CORS headers ===
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json");
 
-// Preflight para OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   http_response_code(200);
   exit;
 }
 
-require_once "../db.php";
-require_once "../config/env.php";
-require '../vendor/autoload.php'; // 👈 necesario para JWT
+require_once __DIR__ . "/../db.php";
+$env = require __DIR__ . "/../config/env.php";
+require __DIR__ . "/../vendor/autoload.php";
+
 
 use Firebase\JWT\JWT;
 
@@ -47,19 +46,27 @@ if (!$user || !password_verify($password, $user["password"])) {
   exit;
 }
 
-// === Generar token JWT ===
+// === Generar JWT (access token) ===
 $payload = [
   "id" => $user["id"],
   "role" => $user["role"],
-  "exp" => time() + 3600, // expira en 1 hora
+  "exp" => time() + 3600 // 1 hora
 ];
+$access_token = JWT::encode($payload, $key, 'HS256');
 
-$jwt = JWT::encode($payload, $key, 'HS256');
+// === Generar Refresh Token (7 días) ===
+$refresh_token = bin2hex(random_bytes(32));
+$expires_at = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+$stmt = $conn->prepare("INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)");
+$stmt->bind_param("iss", $user['id'], $refresh_token, $expires_at);
+$stmt->execute();
 
 // === Respuesta ===
 echo json_encode([
   "message" => "Login correcto",
-  "token" => $jwt,
+  "access_token" => $access_token,
+  "refresh_token" => $refresh_token,
   "user" => [
     "id" => $user["id"],
     "name" => $user["name"],
