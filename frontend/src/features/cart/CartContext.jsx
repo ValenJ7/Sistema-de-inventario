@@ -7,31 +7,40 @@ export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, initialCartState);
   const [isReady, setIsReady] = useState(false);
 
-  // Leer carrito desde localStorage
+  // 🔹 Leer carrito desde localStorage al iniciar
   useEffect(() => {
     try {
       const raw = localStorage.getItem(cartKey);
       if (raw) {
         const parsed = JSON.parse(raw);
-        dispatch({ type: "INIT", payload: parsed });
+        // Evita casos de estructuras vacías o corruptas
+        if (parsed && parsed.items && typeof parsed.items === "object") {
+          dispatch({ type: "INIT", payload: parsed });
+        }
       }
     } catch (e) {
-      console.warn("No se pudo leer el carrito:", e);
+      console.warn("⚠️ No se pudo leer el carrito:", e);
     } finally {
       setIsReady(true);
     }
   }, []);
 
-  // Guardar cambios en localStorage
+  // 🔹 Guardar carrito en localStorage al cambiar
   useEffect(() => {
     if (!isReady) return;
     try {
-      localStorage.setItem(cartKey, JSON.stringify(state));
+      const data = JSON.stringify(state);
+      if (Object.keys(state.items).length > 0) {
+        localStorage.setItem(cartKey, data);
+      } else {
+        localStorage.removeItem(cartKey); // Limpia si está vacío
+      }
     } catch (e) {
-      console.warn("No se pudo guardar el carrito:", e);
+      console.warn("⚠️ No se pudo guardar el carrito:", e);
     }
   }, [state, isReady]);
 
+  // 🔹 Totales: cantidad y subtotal
   const totals = useMemo(() => {
     const items = Object.values(state.items);
     const count = items.reduce((a, it) => a + it.qty, 0);
@@ -39,19 +48,22 @@ export function CartProvider({ children }) {
     return { count, subtotal };
   }, [state.items]);
 
+  // 🔹 API pública del carrito
   const api = useMemo(
     () => ({
       items: state.items,
       ...totals,
+      isReady,
       addItem: (product, { qty = 1, variant = null, stock } = {}) =>
         dispatch({ type: "ADD", payload: { product, qty, variant, stock } }),
-      setQty: (id, variant, qty) => dispatch({ type: "SET_QTY", payload: { id, variant, qty } }),
+      setQty: (id, variant, qty) =>
+        dispatch({ type: "SET_QTY", payload: { id, variant, qty } }),
       inc: (id, variant) => dispatch({ type: "INC", payload: { id, variant } }),
       dec: (id, variant) => dispatch({ type: "DEC", payload: { id, variant } }),
       remove: (id, variant) => dispatch({ type: "REMOVE", payload: { id, variant } }),
       clear: () => dispatch({ type: "CLEAR" }),
     }),
-    [state.items, totals]
+    [state.items, totals, isReady]
   );
 
   return <CartContext.Provider value={api}>{children}</CartContext.Provider>;

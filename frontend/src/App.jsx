@@ -17,9 +17,10 @@ import ReportsPage from "./features/reports/pages/ReportsPage";
 // Carrito
 import { CartProvider } from "./features/cart/CartContext";
 import CheckoutPage from "./features/cart/pages/CheckoutPage";
+import ShippingPage from "./features/cart/pages/ShippingPage"; // 👈 NUEVA PÁGINA
 
 // Autenticación
-import AuthPage from "./features/auth/pages/AuthPage"; // 👈 Nuevo (reemplaza LoginPage)
+import AuthPage from "./features/auth/pages/AuthPage";
 import RegisterPage from "./features/auth/pages/RegisterPage";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 
@@ -43,10 +44,10 @@ export default function App() {
         </Route>
 
         {/* 🔹 Login / Registro públicos */}
-        <Route path="/login" element={<AuthPage />} /> {/* 👈 Vista combinada tipo Rapsodia */}
+        <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* 🔹 Bloque Público (tienda + carrito) */}
+        {/* 🔹 Bloque Público (tienda + carrito + checkout) */}
         <Route
           element={
             <CartProvider>
@@ -57,6 +58,16 @@ export default function App() {
           <Route path="/tienda" element={<Tienda />} />
           <Route path="/producto/:slug" element={<Producto />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+
+          {/* 🚚 NUEVO PASO DE ENVÍO (protegido para clientes logueados) */}
+          <Route
+            path="/checkout/shipping"
+            element={
+              <ProtectedRoute role="customer">
+                <ShippingPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
 
