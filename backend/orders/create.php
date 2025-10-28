@@ -82,7 +82,7 @@ foreach ($items as $item) {
   $stmtItem->execute();
 }
 
-// === RESPUESTA EXITOSA ===
+// === RESPUESTA EXITOSA ==
 echo json_encode([
   "message" => "Pedido creado correctamente",
   "order_id" => $order_id,
