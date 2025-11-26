@@ -4,11 +4,12 @@ import {
   Menu,
   Home,
   ShoppingCart,
+  ClipboardList, // 🆕 icono para Pedidos
   BarChart3,
   Package,
   Tags,
   LogOut,
-  Store, // 🆕 icono para “Tienda”
+  Store,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -20,9 +21,8 @@ const linkClasses = ({ isActive }) =>
 export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const [user, setUser] = useState(null); // 🆕 Guardar info del usuario
+  const [user, setUser] = useState(null);
 
-  // Cargar usuario del localStorage
   useEffect(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -32,7 +32,6 @@ export default function AdminLayout() {
     }
   }, []);
 
-  // 🔒 Función para cerrar sesión
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
@@ -45,7 +44,6 @@ export default function AdminLayout() {
       {/* Top bar */}
       <header className="sticky top-0 z-50 bg-slate-900 text-white shadow">
         <div className="mx-auto max-w-7xl h-14 px-4 flex items-center justify-between">
-          {/* Brand */}
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 grid place-items-center rounded-md bg-white/10">
               🧾
@@ -67,6 +65,13 @@ export default function AdminLayout() {
               </span>
             </NavLink>
 
+            {/* 🆕 NUEVO: Pedidos */}
+            <NavLink to="/pedidos" className={linkClasses}>
+              <span className="inline-flex items-center gap-2">
+                <ClipboardList size={16} /> Pedidos
+              </span>
+            </NavLink>
+
             <NavLink to="/reportes" className={linkClasses}>
               <span className="inline-flex items-center gap-2">
                 <BarChart3 size={16} /> Reportes
@@ -85,7 +90,6 @@ export default function AdminLayout() {
               </span>
             </NavLink>
 
-            {/* 🆕 Solo mostrar si es admin */}
             {user?.role === "admin" && (
               <button
                 onClick={() => navigate("/tienda")}
@@ -95,7 +99,6 @@ export default function AdminLayout() {
               </button>
             )}
 
-            {/* 🔸 Botón de cerrar sesión */}
             <button
               onClick={handleLogout}
               className="ml-4 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition"
@@ -108,7 +111,6 @@ export default function AdminLayout() {
           <button
             className="md:hidden p-2 rounded hover:bg-white/10"
             onClick={() => setOpen((v) => !v)}
-            aria-label="Abrir menú"
           >
             <Menu />
           </button>
@@ -118,54 +120,43 @@ export default function AdminLayout() {
         {open && (
           <nav className="md:hidden border-t border-white/10 bg-slate-900/95">
             <div className="px-4 py-2 flex flex-col gap-2">
-              <NavLink
-                to="/"
-                end
-                className={linkClasses}
-                onClick={() => setOpen(false)}
-              >
+              <NavLink to="/" end className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <Home size={16} /> Inicio
                 </span>
               </NavLink>
-              <NavLink
-                to="/ventas"
-                className={linkClasses}
-                onClick={() => setOpen(false)}
-              >
+
+              <NavLink to="/ventas" className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <ShoppingCart size={16} /> Ventas
                 </span>
               </NavLink>
-              <NavLink
-                to="/reportes"
-                className={linkClasses}
-                onClick={() => setOpen(false)}
-              >
+
+              {/* 🆕 Pedidos en mobile */}
+              <NavLink to="/pedidos" className={linkClasses} onClick={() => setOpen(false)}>
+                <span className="inline-flex items-center gap-2">
+                  <ClipboardList size={16} /> Pedidos
+                </span>
+              </NavLink>
+
+              <NavLink to="/reportes" className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <BarChart3 size={16} /> Reportes
                 </span>
               </NavLink>
-              <NavLink
-                to="/inventario"
-                className={linkClasses}
-                onClick={() => setOpen(false)}
-              >
+
+              <NavLink to="/inventario" className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <Package size={16} /> Productos
                 </span>
               </NavLink>
-              <NavLink
-                to="/categorias"
-                className={linkClasses}
-                onClick={() => setOpen(false)}
-              >
+
+              <NavLink to="/categorias" className={linkClasses} onClick={() => setOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   <Tags size={16} /> Categorías
                 </span>
               </NavLink>
 
-              {/* 🆕 Opción “Ver tienda” también en mobile */}
               {user?.role === "admin" && (
                 <button
                   onClick={() => {
@@ -178,7 +169,6 @@ export default function AdminLayout() {
                 </button>
               )}
 
-              {/* 🔸 Logout también en mobile */}
               <button
                 onClick={() => {
                   handleLogout();
@@ -193,7 +183,6 @@ export default function AdminLayout() {
         )}
       </header>
 
-      {/* Content */}
       <main className="flex-1">
         <div className="mx-auto max-w-7xl p-4">
           <Outlet />

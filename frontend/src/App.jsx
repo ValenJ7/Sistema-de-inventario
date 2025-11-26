@@ -14,6 +14,10 @@ import Producto from "./features/catalog/pages/Producto";
 import SalesPage from "./features/sales/pages/SalesPage";
 import ReportsPage from "./features/reports/pages/ReportsPage";
 
+// 🟦 Pedidos (nuevo módulo)
+import OrdersList from "./features/orders/pages/OrdersList";
+import OrderDetail from "./features/orders/pages/OrderDetail";
+
 // Carrito
 import { CartProvider } from "./features/cart/CartContext";
 import CheckoutPage from "./features/cart/pages/CheckoutPage";
@@ -46,6 +50,10 @@ export default function App() {
           <Route path="/reportes" element={<ReportsPage />} />
           <Route path="/inventario" element={<InventoryPage />} />
           <Route path="/categorias" element={<CategoryPage />} />
+
+          {/* 🟦 NUEVO: Pedidos */}
+          <Route path="/pedidos" element={<OrdersList />} />
+          <Route path="/pedidos/:id" element={<OrderDetail />} />
         </Route>
 
         {/* 🔹 Login y Registro */}
