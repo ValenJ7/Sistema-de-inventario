@@ -17,7 +17,12 @@ import ReportsPage from "./features/reports/pages/ReportsPage";
 // Carrito
 import { CartProvider } from "./features/cart/CartContext";
 import CheckoutPage from "./features/cart/pages/CheckoutPage";
-import ShippingPage from "./features/cart/pages/ShippingPage"; // 👈 NUEVA PÁGINA
+import ShippingPage from "./features/cart/pages/ShippingPage";
+
+// Resultados de pago
+import SuccessPage from "./features/cart/pages/SuccessPage";
+import FailurePage from "./features/cart/pages/FailurePage";
+import PendingPage from "./features/cart/pages/PendingPage";
 
 // Autenticación
 import AuthPage from "./features/auth/pages/AuthPage";
@@ -28,7 +33,7 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* 🔹 Bloque Admin protegido (solo accesible si estás logueado como admin) */}
+        {/* 🔹 Bloque Admin protegido */}
         <Route
           element={
             <ProtectedRoute role="admin">
@@ -43,7 +48,7 @@ export default function App() {
           <Route path="/categorias" element={<CategoryPage />} />
         </Route>
 
-        {/* 🔹 Login / Registro públicos */}
+        {/* 🔹 Login y Registro */}
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
@@ -57,9 +62,11 @@ export default function App() {
         >
           <Route path="/tienda" element={<Tienda />} />
           <Route path="/producto/:slug" element={<Producto />} />
+
+          {/* Checkout */}
           <Route path="/checkout" element={<CheckoutPage />} />
 
-          {/* 🚚 NUEVO PASO DE ENVÍO (protegido para clientes logueados) */}
+          {/* Paso de envío (solo clientes) */}
           <Route
             path="/checkout/shipping"
             element={
@@ -68,10 +75,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Resultado de pagos */}
+          <Route path="/checkout/success" element={<SuccessPage />} />
+          <Route path="/checkout/failure" element={<FailurePage />} />
+          <Route path="/checkout/pending" element={<PendingPage />} />
         </Route>
       </Routes>
 
-      {/* 🔔 Toaster global */}
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
     </Router>
   );

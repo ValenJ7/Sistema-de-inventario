@@ -54,7 +54,7 @@ export default function ShippingPage() {
       clear();
 
       // Redirige al link de pago (por ahora simulado)
-      window.location.href = data.payment_link;
+      window.location.href = data.mp_init_point;
     } catch (err) {
       console.error(err);
       toast.error(err.message);
