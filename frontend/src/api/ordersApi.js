@@ -54,3 +54,14 @@ export async function updateShippingStatus(orderId, status, token) {
     throw e?.response?.data?.error || 'Error al actualizar estado';
   }
 }
+
+export async function fetchReadyToShipOrders(token) {
+  try {
+    const res = await api.get("admin/orders/list-ready.php", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  } catch (e) {
+    throw e?.response?.data?.error || "Error al obtener pedidos para despachar";
+  }
+}

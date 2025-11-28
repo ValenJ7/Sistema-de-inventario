@@ -17,6 +17,7 @@ import ReportsPage from "./features/reports/pages/ReportsPage";
 // 🟦 Pedidos (nuevo módulo)
 import OrdersList from "./features/orders/pages/OrdersList";
 import OrderDetail from "./features/orders/pages/OrderDetail";
+import OrdersToShip from "./features/orders/pages/OrdersToShip";
 
 // Carrito
 import { CartProvider } from "./features/cart/CartContext";
@@ -54,6 +55,7 @@ export default function App() {
           {/* 🟦 NUEVO: Pedidos */}
           <Route path="/pedidos" element={<OrdersList />} />
           <Route path="/pedidos/:id" element={<OrderDetail />} />
+          <Route path="/pedidos/despachar" element={<OrdersToShip />} />
         </Route>
 
         {/* 🔹 Login y Registro */}
